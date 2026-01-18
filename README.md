@@ -22,6 +22,8 @@
   <img src="https://img.shields.io/badge/GraphQL-E10098?style=for-the-badge&logo=graphql&logoColor=white" alt="GraphQL"/>
   <img src="https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white" alt="MongoDB"/>
   <img src="https://img.shields.io/badge/TailwindCSS-4-06B6D4?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS"/>
+  <img src="https://img.shields.io/badge/AWS_EC2-FF9900?style=for-the-badge&logo=amazon-aws&logoColor=white" alt="AWS EC2"/>
+  <img src="https://img.shields.io/badge/Netlify-00C7B7?style=for-the-badge&logo=netlify&logoColor=white" alt="Netlify"/>
 </p>
 
 ---
@@ -94,6 +96,7 @@
 | **Cloudinary**  | Cloud-based image and media management |
 | **Air**         | Live-reload for development            |
 | **Docker**      | Containerized development environment  |
+| **AWS EC2**     | Production Hosting (Backend & Search)  |
 
 ### Frontend (`naan/`)
 
@@ -108,6 +111,7 @@
 | **React Hook Form** | Performant form management       |
 | **NextAuth.js**     | Authentication for Next.js       |
 | **Lucide React**    | Beautiful icon library           |
+| **Netlify**         | Production Frontend Deployment   |
 
 ---
 

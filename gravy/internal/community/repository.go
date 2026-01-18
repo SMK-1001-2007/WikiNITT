@@ -2,6 +2,8 @@ package community
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -62,6 +64,12 @@ type Repository interface {
 	ListUnindexedComments(ctx context.Context, limit int) ([]*Comment, error)
 	MarkCommentIndexed(ctx context.Context, id string) error
 	EnsureIndexes(ctx context.Context) error
+
+	GenerateInviteToken(ctx context.Context, groupID string) (string, error)
+	GetGroupByInviteToken(ctx context.Context, token string) (*Group, error)
+	AddJoinRequest(ctx context.Context, groupID, userID string) error
+	RemoveJoinRequest(ctx context.Context, groupID, userID string) error
+	RemoveMember(ctx context.Context, groupID, userID string) error
 }
 
 type repository struct {
@@ -345,7 +353,6 @@ func (r *repository) DeleteGroup(ctx context.Context, groupID string) error {
 func (r *repository) ListGroupsByMember(ctx context.Context, userID string) ([]*Group, error) {
 	filter := bson.M{
 		"memberIds": userID,
-		"type":      "PUBLIC",
 	}
 	cursor, err := r.db.Collection("groups").Find(ctx, filter)
 	if err != nil {
@@ -1179,4 +1186,58 @@ func (r *repository) EnsureIndexes(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (r *repository) GenerateInviteToken(ctx context.Context, groupID string) (string, error) {
+	oid, err := bson.ObjectIDFromHex(groupID)
+	if err != nil {
+		return "", err
+	}
+
+	token := generateRandomString(32) // We'll implement this helper
+	_, err = r.db.Collection("groups").UpdateOne(ctx, bson.M{"_id": oid}, bson.M{"$set": bson.M{"inviteToken": token}})
+	if err != nil {
+		return "", err
+	}
+	return token, nil
+}
+
+func (r *repository) GetGroupByInviteToken(ctx context.Context, token string) (*Group, error) {
+	var group Group
+	err := r.db.Collection("groups").FindOne(ctx, bson.M{"inviteToken": token}).Decode(&group)
+	if err != nil {
+		return nil, err
+	}
+	return &group, nil
+}
+
+func (r *repository) AddJoinRequest(ctx context.Context, groupID, userID string) error {
+	oid, err := bson.ObjectIDFromHex(groupID)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Collection("groups").UpdateOne(ctx, bson.M{"_id": oid}, bson.M{"$addToSet": bson.M{"joinRequestIds": userID}})
+	return err
+}
+
+func (r *repository) RemoveJoinRequest(ctx context.Context, groupID, userID string) error {
+	oid, err := bson.ObjectIDFromHex(groupID)
+	if err != nil {
+		return err
+	}
+	_, err = r.db.Collection("groups").UpdateOne(ctx, bson.M{"_id": oid}, bson.M{"$pull": bson.M{"joinRequestIds": userID}})
+	return err
+}
+
+func (r *repository) RemoveMember(ctx context.Context, groupID, userID string) error {
+	return r.LeaveGroup(ctx, groupID, userID)
+}
+
+func generateRandomString(n int) string {
+	b := make([]byte, n)
+	_, err := rand.Read(b)
+	if err != nil {
+		return ""
+	}
+	return base64.RawURLEncoding.EncodeToString(b)
 }

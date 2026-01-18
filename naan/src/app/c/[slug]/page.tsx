@@ -38,6 +38,7 @@ export default function GroupPage() {
       return data?.group;
     },
     enabled: !!slug && status !== "loading",
+    refetchInterval: isEditModalOpen ? 3000 : false,
   });
 
   useEffect(() => {
@@ -136,6 +137,7 @@ export default function GroupPage() {
                   groupId={group.id}
                   initialIsMember={group.isMember}
                   isOwner={isOwner}
+                  groupType={group.type}
                 />
                 {group.isMember ? (
                   <Link
@@ -207,19 +209,21 @@ export default function GroupPage() {
           </div>
         </div>
       </div>
-      {(group as any) && (
-        <EditGroupModal
-          isOpen={isEditModalOpen}
-          onClose={() => setIsEditModalOpen(false)}
-          group={{
-            id: group.id,
-            name: group.name,
-            description: group.description,
-            icon: (group as any).icon,
-            slug: group.slug,
-          }}
-        />
-      )}
+      <EditGroupModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        group={{
+          id: group.id,
+          name: group.name,
+          description: group.description,
+          icon: (group as any).icon,
+          slug: group.slug,
+          type: group.type,
+          inviteToken: (group as any).inviteToken,
+          joinRequests: (group as any).joinRequests,
+          members: (group as any).members,
+        }}
+      />
     </div>
   );
 }

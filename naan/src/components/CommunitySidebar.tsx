@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { request } from "graphql-request";
 import { GET_GROUPS } from "@/queries/community";
+import { GET_ME } from "@/queries/user";
 import { Query, GroupType } from "@/gql/graphql";
 import { useSession } from "next-auth/react";
 import { getGraphQLClient } from "@/lib/graphql";
@@ -12,7 +13,7 @@ export default function CommunitySidebar() {
   const { data: session } = useSession();
 
   const { data: popularGroups, isLoading: isLoadingPopular } = useQuery({
-    queryKey: ["publicGroups"],
+    queryKey: ["publicGroups", session?.backendToken],
     queryFn: async () => {
       const client = getGraphQLClient(session?.backendToken);
       const data = await client.request<Query>(GET_GROUPS, {
@@ -22,26 +23,22 @@ export default function CommunitySidebar() {
       });
       return data.groups;
     },
+    enabled: !!session?.backendToken,
   });
 
   const { data: myGroups, isLoading: isLoadingMyGroups } = useQuery({
-    queryKey: ["myGroups", session?.user?.id],
+    queryKey: ["myGroups", session?.backendToken],
     queryFn: async () => {
-      if (!session?.user?.id) return [];
+      if (!session?.backendToken) return [];
       const client = getGraphQLClient(session.backendToken);
-      const data = await client.request<Query>(GET_GROUPS, {
-        limit: 10,
-        offset: 0,
-        ownerId: session.user.id,
-      });
-      return data.groups;
+      const data = await client.request<Query>(GET_ME);
+      return data.me.groups;
     },
-    enabled: !!session?.user?.id,
+    enabled: !!session?.backendToken,
   });
 
   return (
     <div className="space-y-4 sticky top-20">
-      {}
       {session?.user && (
         <div className="bg-white rounded-md border border-gray-200 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100 bg-gray-50">
@@ -81,7 +78,7 @@ export default function CommunitySidebar() {
             )}
             {myGroups?.length === 0 && !isLoadingMyGroups && (
               <div className="p-4 text-center text-sm text-gray-500">
-                You haven't created any communities yet.
+                You are not part of any community yet.
               </div>
             )}
           </div>

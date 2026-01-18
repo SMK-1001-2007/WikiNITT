@@ -24,7 +24,7 @@ func hashPassword(password string) (string, error) {
 }
 
 func main() {
-	
+
 	email := flag.String("email", "", "Email for the new admin user (required)")
 	password := flag.String("password", "", "Password for the new admin user (required)")
 	username := flag.String("username", "", "Username for the new admin user (required)")
@@ -32,7 +32,6 @@ func main() {
 
 	flag.Parse()
 
-	
 	if *email == "" || *password == "" || *name == "" {
 		log.Println("Error: --email, --password and --name flags are required.")
 		flag.Usage()
@@ -43,7 +42,6 @@ func main() {
 		log.Println("No .env file found")
 	}
 
-	
 	mongoURI := os.Getenv("MONGODB_URI")
 	if mongoURI == "" {
 		log.Fatal("MONGODB_URI environment variable is required")
@@ -56,7 +54,6 @@ func main() {
 
 	userCollection := client.Database("wikinitt").Collection("users")
 
-	
 	var existingUser users.User
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -69,7 +66,6 @@ func main() {
 		log.Fatalf("Error checking for existing user: %v", err)
 	}
 
-	
 	cldName := os.Getenv("CLOUDINARY_CLOUD_NAME")
 	cldKey := os.Getenv("CLOUDINARY_API_KEY")
 	cldSecret := os.Getenv("CLOUDINARY_API_SECRET")
@@ -92,11 +88,11 @@ func main() {
 	avatarURL, err := auth.AvatarGenerationAndCleanup(tempID, uploaderService)
 	if err != nil {
 		log.Printf("Warning: unable to upload avatar image: %v. Using default.", err)
-		avatarURL = "" 
+		avatarURL = ""
 	}
 
 	newUser := users.User{
-		
+
 		Email:         *email,
 		Username:      *username,
 		PasswordHash:  hashedPassword,
@@ -105,7 +101,7 @@ func main() {
 		DisplayName:   *name,
 		Avatar:        avatarURL,
 		CreatedAt:     time.Now(),
-		DauthID:       "admin_" + *email, 
+		DauthID:       "admin_" + *email,
 		Gender:        "Unspecified",
 		PhoneNumber:   "",
 		IsBanned:      false,

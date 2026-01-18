@@ -176,6 +176,101 @@ func (r *groupResolver) Posts(ctx context.Context, obj *model.Group, limit *int3
 	return modelPosts, nil
 }
 
+// InviteToken is the resolver for the inviteToken field.
+func (r *groupResolver) InviteToken(ctx context.Context, obj *model.Group) (*string, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return nil, nil
+	}
+
+	if user.ID != obj.Owner.ID {
+		return nil, nil // Only owner can see
+	}
+
+	g, err := r.CommunityRepo.GetGroupByID(ctx, obj.ID)
+	if err != nil {
+		return nil, nil
+	}
+	if g.InviteToken == "" {
+		return nil, nil
+	}
+	return &g.InviteToken, nil
+}
+
+// JoinRequests is the resolver for the joinRequests field.
+func (r *groupResolver) JoinRequests(ctx context.Context, obj *model.Group) ([]*model.PublicUser, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return nil, nil
+	}
+
+	if user.ID != obj.Owner.ID {
+		return nil, nil // Only owner can see
+	}
+
+	g, err := r.CommunityRepo.GetGroupByID(ctx, obj.ID)
+	if err != nil {
+		return nil, nil
+	}
+
+	var requests []*model.PublicUser
+	for _, uid := range g.JoinRequestIDs {
+		u, err := r.UserRepo.GetByID(ctx, uid)
+		if err == nil {
+			requests = append(requests, mapPublicUserToModel(mapUserToPublic(u)))
+		}
+	}
+	return requests, nil
+}
+
+// Members is the resolver for the members field.
+func (r *groupResolver) Members(ctx context.Context, obj *model.Group) ([]*model.PublicUser, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return nil, nil
+	}
+
+	isMember, _ := r.CommunityRepo.IsMember(ctx, obj.ID, user.ID)
+	if !isMember && user.ID != obj.Owner.ID {
+		// Only members and owner see members list
+		return nil, nil
+	}
+
+	g, err := r.CommunityRepo.GetGroupByID(ctx, obj.ID)
+	if err != nil {
+		return nil, nil
+	}
+
+	var members []*model.PublicUser
+	for _, uid := range g.MemberIDs {
+		u, err := r.UserRepo.GetByID(ctx, uid)
+		if err == nil {
+			members = append(members, mapPublicUserToModel(mapUserToPublic(u)))
+		}
+	}
+	return members, nil
+}
+
+// HasPendingRequest is the resolver for the hasPendingRequest field.
+func (r *groupResolver) HasPendingRequest(ctx context.Context, obj *model.Group) (bool, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return false, nil
+	}
+
+	g, err := r.CommunityRepo.GetGroupByID(ctx, obj.ID)
+	if err != nil {
+		return false, err
+	}
+
+	for _, uid := range g.JoinRequestIDs {
+		if uid == user.ID {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 // CreateGroup is the resolver for the createGroup field.
 func (r *mutationResolver) CreateGroup(ctx context.Context, input model.NewGroup) (*model.Group, error) {
 	user := auth.ForContext(ctx)
@@ -231,7 +326,17 @@ func (r *mutationResolver) JoinGroup(ctx context.Context, groupID string) (bool,
 		return false, fmt.Errorf("not authenticated")
 	}
 
-	err := r.CommunityRepo.JoinGroup(ctx, groupID, user.ID)
+	// Check group type
+	group, err := r.CommunityRepo.GetGroupByID(ctx, groupID)
+	if err != nil {
+		return false, err
+	}
+
+	if group.Type == community.GroupTypePrivate {
+		return false, fmt.Errorf("cannot join private group directly")
+	}
+
+	err = r.CommunityRepo.JoinGroup(ctx, groupID, user.ID)
 	if err != nil {
 		return false, err
 	}
@@ -268,7 +373,7 @@ func (r *mutationResolver) CreatePost(ctx context.Context, input model.NewPost) 
 	}
 
 	post := &community.Post{
-		Title:     sanitization.SanitizeString(input.Title),
+		Title:     input.Title,
 		Content:   sanitization.SanitizeContent(input.Content),
 		AuthorID:  user.ID,
 		GroupID:   input.GroupID,
@@ -463,6 +568,130 @@ func (r *mutationResolver) UpdateGroup(ctx context.Context, groupID string, name
 	return mapGroupToModel(updatedGroup, mapUserToPublic(owner)), nil
 }
 
+// GenerateGroupInvite is the resolver for the generateGroupInvite field.
+func (r *mutationResolver) GenerateGroupInvite(ctx context.Context, groupID string) (string, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return "", fmt.Errorf("not authenticated")
+	}
+
+	group, err := r.CommunityRepo.GetGroupByID(ctx, groupID)
+	if err != nil {
+		return "", err
+	}
+
+	if group.OwnerID != user.ID {
+		return "", fmt.Errorf("access denied: only owner can generate invite")
+	}
+
+	return r.CommunityRepo.GenerateInviteToken(ctx, groupID)
+}
+
+// RequestJoinGroup is the resolver for the requestJoinGroup field.
+func (r *mutationResolver) RequestJoinGroup(ctx context.Context, groupID string, token string) (bool, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return false, fmt.Errorf("not authenticated")
+	}
+
+	group, err := r.CommunityRepo.GetGroupByInviteToken(ctx, token)
+	if err != nil {
+		return false, fmt.Errorf("invalid token")
+	}
+
+	if group.ID != groupID {
+		return false, fmt.Errorf("invalid token for this group")
+	}
+
+	// Check if already member
+	isMember, _ := r.CommunityRepo.IsMember(ctx, groupID, user.ID)
+	if isMember {
+		return true, nil // Already member
+	}
+
+	err = r.CommunityRepo.AddJoinRequest(ctx, groupID, user.ID)
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
+}
+
+// AcceptJoinRequest is the resolver for the acceptJoinRequest field.
+func (r *mutationResolver) AcceptJoinRequest(ctx context.Context, groupID string, userID string) (bool, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return false, fmt.Errorf("not authenticated")
+	}
+
+	group, err := r.CommunityRepo.GetGroupByID(ctx, groupID)
+	if err != nil {
+		return false, err
+	}
+
+	if group.OwnerID != user.ID {
+		return false, fmt.Errorf("access denied")
+	}
+
+	err = r.CommunityRepo.JoinGroup(ctx, groupID, userID)
+	if err != nil {
+		return false, err
+	}
+
+	_ = r.CommunityRepo.RemoveJoinRequest(ctx, groupID, userID)
+	return true, nil
+}
+
+// RejectJoinRequest is the resolver for the rejectJoinRequest field.
+func (r *mutationResolver) RejectJoinRequest(ctx context.Context, groupID string, userID string) (bool, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return false, fmt.Errorf("not authenticated")
+	}
+
+	group, err := r.CommunityRepo.GetGroupByID(ctx, groupID)
+	if err != nil {
+		return false, err
+	}
+
+	if group.OwnerID != user.ID {
+		return false, fmt.Errorf("access denied")
+	}
+
+	err = r.CommunityRepo.RemoveJoinRequest(ctx, groupID, userID)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// RemoveMember is the resolver for the removeMember field.
+func (r *mutationResolver) RemoveMember(ctx context.Context, groupID string, userID string) (bool, error) {
+	user := auth.ForContext(ctx)
+	if user == nil {
+		return false, fmt.Errorf("not authenticated")
+	}
+
+	group, err := r.CommunityRepo.GetGroupByID(ctx, groupID)
+	if err != nil {
+		return false, err
+	}
+
+	if group.OwnerID != user.ID {
+		return false, fmt.Errorf("access denied")
+	}
+
+	if group.OwnerID == userID {
+		return false, fmt.Errorf("cannot remove owner")
+	}
+
+	err = r.CommunityRepo.RemoveMember(ctx, groupID, userID)
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // UserVote is the resolver for the userVote field.
 func (r *postResolver) UserVote(ctx context.Context, obj *model.Post) (model.VoteType, error) {
 	user := auth.ForContext(ctx)
@@ -653,6 +882,16 @@ func (r *queryResolver) Group(ctx context.Context, slug string) (*model.Group, e
 		Avatar:      owner.Avatar,
 	}
 	return mapGroupToModel(g, ownerPublic), nil
+}
+
+// GroupByInviteToken is the resolver for the groupByInviteToken field.
+func (r *queryResolver) GroupByInviteToken(ctx context.Context, token string) (*model.Group, error) {
+	g, err := r.CommunityRepo.GetGroupByInviteToken(ctx, token)
+	if err != nil {
+		return nil, err
+	}
+	owner, _ := r.UserRepo.GetByID(ctx, g.OwnerID)
+	return mapGroupToModel(g, mapUserToPublic(owner)), nil
 }
 
 // Post is the resolver for the post field.

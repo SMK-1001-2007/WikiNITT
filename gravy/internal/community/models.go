@@ -12,17 +12,19 @@ const (
 )
 
 type Group struct {
-	ID           string    `bson:"_id,omitempty"`
-	Name         string    `bson:"name"`
-	Description  string    `bson:"description"`
-	Slug         string    `bson:"slug"`
-	Type         GroupType `bson:"type"`
-	OwnerID      string    `bson:"ownerId"`
-	MembersCount int       `bson:"membersCount"`
-	CreatedAt    time.Time `bson:"createdAt"`
-	MemberIDs    []string  `bson:"memberIds"`
-	Indexed      bool      `bson:"indexed"`
-	Icon         string    `bson:"icon,omitempty"`
+	ID             string    `bson:"_id,omitempty"`
+	Name           string    `bson:"name"`
+	Description    string    `bson:"description"`
+	Slug           string    `bson:"slug"`
+	Type           GroupType `bson:"type"`
+	OwnerID        string    `bson:"ownerId"`
+	MembersCount   int       `bson:"membersCount"`
+	CreatedAt      time.Time `bson:"createdAt"`
+	MemberIDs      []string  `bson:"memberIds"`
+	Indexed        bool      `bson:"indexed"`
+	Icon           string    `bson:"icon,omitempty"`
+	InviteToken    string    `bson:"inviteToken,omitempty"`
+	JoinRequestIDs []string  `bson:"joinRequestIds,omitempty"`
 }
 
 type GroupFilter struct {

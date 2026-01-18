@@ -11,6 +11,7 @@ type User {
   isAdmin: Boolean!
   isBanned: Boolean!
   createdAt: String!
+  groups: [Group!]!
 }
 
 type PublicUser {

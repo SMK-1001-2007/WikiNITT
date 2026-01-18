@@ -10,6 +10,10 @@ type Group {
   isMember: Boolean! # Computed for current user
   posts(limit: Int, offset: Int): [Post!]!
   createdAt: String!
+  inviteToken: String @auth(requires: USER) # Only visible to owner
+  joinRequests: [PublicUser!] @auth(requires: USER) # Only visible to owner
+  members: [PublicUser!] @auth(requires: USER)
+  hasPendingRequest: Boolean! # Computed for current user
 }
 
 enum GroupType {
@@ -73,6 +77,7 @@ extend type Query {
   groups(limit: Int, offset: Int, ownerId: ID, type: GroupType): [Group!]!
     @auth(requires: USER)
   group(slug: String!): Group @auth(requires: USER)
+  groupByInviteToken(token: String!): Group
   post(id: ID!): Post @auth(requires: USER)
   comment(id: ID!): Comment @auth(requires: USER)
   publicPosts(limit: Int, offset: Int): [Post!]! @auth(requires: USER)
@@ -92,4 +97,9 @@ extend type Mutation {
     description: String
     icon: String
   ): Group! @auth(requires: USER)
+  generateGroupInvite(groupId: ID!): String! @auth(requires: USER)
+  requestJoinGroup(groupId: ID!, token: String!): Boolean! @auth(requires: USER)
+  acceptJoinRequest(groupId: ID!, userId: ID!): Boolean! @auth(requires: USER)
+  rejectJoinRequest(groupId: ID!, userId: ID!): Boolean! @auth(requires: USER)
+  removeMember(groupId: ID!, userId: ID!): Boolean! @auth(requires: USER)
 }

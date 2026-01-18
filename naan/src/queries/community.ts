@@ -33,6 +33,19 @@ export const GET_GROUP_BY_SLUG = gql(`
       membersCount
       isMember
       createdAt
+      inviteToken
+      joinRequests {
+        id
+        name
+        username
+        avatar
+      }
+      members {
+        id
+        name
+        username
+        avatar
+      }
       owner {
         id
         name
@@ -330,5 +343,58 @@ export const GET_PUBLIC_POSTS = gql(`
 export const UPLOAD_USER_IMAGE_MUTATION = gql(`
   mutation UploadUserImage($file: Upload!) {
     uploadUserImage(file: $file)
+  }
+`);
+
+export const GENERATE_GROUP_INVITE = gql(`
+  mutation GenerateGroupInvite($groupId: ID!) {
+    generateGroupInvite(groupId: $groupId)
+  }
+`);
+
+export const REQUEST_JOIN_GROUP = gql(`
+  mutation RequestJoinGroup($groupId: ID!, $token: String!) {
+    requestJoinGroup(groupId: $groupId, token: $token)
+  }
+`);
+
+export const ACCEPT_JOIN_REQUEST = gql(`
+  mutation AcceptJoinRequest($groupId: ID!, $userId: ID!) {
+    acceptJoinRequest(groupId: $groupId, userId: $userId)
+  }
+`);
+
+export const REJECT_JOIN_REQUEST = gql(`
+  mutation RejectJoinRequest($groupId: ID!, $userId: ID!) {
+    rejectJoinRequest(groupId: $groupId, userId: $userId)
+  }
+`);
+
+export const REMOVE_MEMBER = gql(`
+  mutation RemoveMember($groupId: ID!, $userId: ID!) {
+    removeMember(groupId: $groupId, userId: $userId)
+  }
+`);
+
+export const GET_GROUP_BY_INVITE_TOKEN = gql(`
+  query GetGroupByInviteToken($token: String!) {
+    groupByInviteToken(token: $token) {
+      id
+      name
+      description
+      icon
+      slug
+      type
+      membersCount
+      isMember
+      hasPendingRequest
+      createdAt
+      owner {
+        id
+        name
+        username
+        avatar
+      }
+    }
   }
 `);

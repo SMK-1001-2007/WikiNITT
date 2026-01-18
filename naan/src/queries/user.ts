@@ -95,6 +95,13 @@ export const GET_ME = gql(`
       username
       displayName
       avatar
+      groups {
+        id
+        name
+        slug
+        membersCount
+        icon
+      }
     }
   }
 `);

@@ -163,6 +163,14 @@ models:
         resolver: true
       isMember:
         resolver: true
+      inviteToken:
+        resolver: true
+      joinRequests:
+        resolver: true
+      members:
+        resolver: true
+      hasPendingRequest:
+        resolver: true
   Post:
     fields:
       userVote:
@@ -189,5 +197,9 @@ models:
         resolver: true
       comments:
         resolver: true
+      groups:
+        resolver: true
+  User:
+    fields:
       groups:
         resolver: true

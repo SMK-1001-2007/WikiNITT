@@ -48,6 +48,7 @@ type ResolverRoot interface {
 	PublicUser() PublicUserResolver
 	Query() QueryResolver
 	Subscription() SubscriptionResolver
+	User() UserResolver
 }
 
 type DirectiveRoot struct {
@@ -105,17 +106,21 @@ type ComplexityRoot struct {
 	}
 
 	Group struct {
-		CreatedAt    func(childComplexity int) int
-		Description  func(childComplexity int) int
-		ID           func(childComplexity int) int
-		Icon         func(childComplexity int) int
-		IsMember     func(childComplexity int) int
-		MembersCount func(childComplexity int) int
-		Name         func(childComplexity int) int
-		Owner        func(childComplexity int) int
-		Posts        func(childComplexity int, limit *int32, offset *int32) int
-		Slug         func(childComplexity int) int
-		Type         func(childComplexity int) int
+		CreatedAt         func(childComplexity int) int
+		Description       func(childComplexity int) int
+		HasPendingRequest func(childComplexity int) int
+		ID                func(childComplexity int) int
+		Icon              func(childComplexity int) int
+		InviteToken       func(childComplexity int) int
+		IsMember          func(childComplexity int) int
+		JoinRequests      func(childComplexity int) int
+		Members           func(childComplexity int) int
+		MembersCount      func(childComplexity int) int
+		Name              func(childComplexity int) int
+		Owner             func(childComplexity int) int
+		Posts             func(childComplexity int, limit *int32, offset *int32) int
+		Slug              func(childComplexity int) int
+		Type              func(childComplexity int) int
 	}
 
 	Message struct {
@@ -127,32 +132,37 @@ type ComplexityRoot struct {
 	}
 
 	Mutation struct {
-		BlockUser       func(childComplexity int, id string) int
-		CompleteSetup   func(childComplexity int, input model.CompleteSetupInput) int
-		CreateArticle   func(childComplexity int, input model.NewArticle) int
-		CreateCategory  func(childComplexity int, name string) int
-		CreateChannel   func(childComplexity int, input model.NewChannel) int
-		CreateComment   func(childComplexity int, input model.NewComment) int
-		CreateGroup     func(childComplexity int, input model.NewGroup) int
-		CreatePost      func(childComplexity int, input model.NewPost) int
-		DeleteArticle   func(childComplexity int, id string) int
-		DeleteCategory  func(childComplexity int, id string) int
-		DeleteGroup     func(childComplexity int, groupID string) int
-		Empty           func(childComplexity int) int
-		JoinGroup       func(childComplexity int, groupID string) int
-		LeaveGroup      func(childComplexity int, groupID string) int
-		Login           func(childComplexity int, input model.LoginInput) int
-		SendMessage     func(childComplexity int, input model.NewMessage) int
-		SignIn          func(childComplexity int, input model.NewUser) int
-		UnblockUser     func(childComplexity int, id string) int
-		UpdateArticle   func(childComplexity int, input model.UpdateArticle) int
-		UpdateGroup     func(childComplexity int, groupID string, name *string, description *string, icon *string) int
-		UpdateUser      func(childComplexity int, input model.UpdateUserInput) int
-		UploadAvatar    func(childComplexity int, file graphql.Upload) int
-		UploadImage     func(childComplexity int, file graphql.Upload) int
-		UploadUserImage func(childComplexity int, file graphql.Upload) int
-		VoteComment     func(childComplexity int, commentID string, typeArg model.VoteType) int
-		VotePost        func(childComplexity int, postID string, typeArg model.VoteType) int
+		AcceptJoinRequest   func(childComplexity int, groupID string, userID string) int
+		BlockUser           func(childComplexity int, id string) int
+		CompleteSetup       func(childComplexity int, input model.CompleteSetupInput) int
+		CreateArticle       func(childComplexity int, input model.NewArticle) int
+		CreateCategory      func(childComplexity int, name string) int
+		CreateChannel       func(childComplexity int, input model.NewChannel) int
+		CreateComment       func(childComplexity int, input model.NewComment) int
+		CreateGroup         func(childComplexity int, input model.NewGroup) int
+		CreatePost          func(childComplexity int, input model.NewPost) int
+		DeleteArticle       func(childComplexity int, id string) int
+		DeleteCategory      func(childComplexity int, id string) int
+		DeleteGroup         func(childComplexity int, groupID string) int
+		Empty               func(childComplexity int) int
+		GenerateGroupInvite func(childComplexity int, groupID string) int
+		JoinGroup           func(childComplexity int, groupID string) int
+		LeaveGroup          func(childComplexity int, groupID string) int
+		Login               func(childComplexity int, input model.LoginInput) int
+		RejectJoinRequest   func(childComplexity int, groupID string, userID string) int
+		RemoveMember        func(childComplexity int, groupID string, userID string) int
+		RequestJoinGroup    func(childComplexity int, groupID string, token string) int
+		SendMessage         func(childComplexity int, input model.NewMessage) int
+		SignIn              func(childComplexity int, input model.NewUser) int
+		UnblockUser         func(childComplexity int, id string) int
+		UpdateArticle       func(childComplexity int, input model.UpdateArticle) int
+		UpdateGroup         func(childComplexity int, groupID string, name *string, description *string, icon *string) int
+		UpdateUser          func(childComplexity int, input model.UpdateUserInput) int
+		UploadAvatar        func(childComplexity int, file graphql.Upload) int
+		UploadImage         func(childComplexity int, file graphql.Upload) int
+		UploadUserImage     func(childComplexity int, file graphql.Upload) int
+		VoteComment         func(childComplexity int, commentID string, typeArg model.VoteType) int
+		VotePost            func(childComplexity int, postID string, typeArg model.VoteType) int
 	}
 
 	Post struct {
@@ -182,25 +192,26 @@ type ComplexityRoot struct {
 	}
 
 	Query struct {
-		Article         func(childComplexity int, id string) int
-		ArticleBySlug   func(childComplexity int, slug string) int
-		Articles        func(childComplexity int, category *string, limit *int32, offset *int32, featured *bool) int
-		Categories      func(childComplexity int) int
-		Channel         func(childComplexity int, id string) int
-		CheckUsername   func(childComplexity int, username string) int
-		Comment         func(childComplexity int, id string) int
-		Discussion      func(childComplexity int, groupID string) int
-		Group           func(childComplexity int, slug string) int
-		Groups          func(childComplexity int, limit *int32, offset *int32, ownerID *string, typeArg *model.GroupType) int
-		Me              func(childComplexity int) int
-		Ping            func(childComplexity int) int
-		Post            func(childComplexity int, id string) int
-		PublicPosts     func(childComplexity int, limit *int32, offset *int32) int
-		SearchArticles  func(childComplexity int, query string, limit *int32, offset *int32) int
-		SearchCommunity func(childComplexity int, query string, limit *int32, offset *int32) int
-		SearchPosts     func(childComplexity int, query string, limit *int32, offset *int32) int
-		User            func(childComplexity int, username string) int
-		Users           func(childComplexity int) int
+		Article            func(childComplexity int, id string) int
+		ArticleBySlug      func(childComplexity int, slug string) int
+		Articles           func(childComplexity int, category *string, limit *int32, offset *int32, featured *bool) int
+		Categories         func(childComplexity int) int
+		Channel            func(childComplexity int, id string) int
+		CheckUsername      func(childComplexity int, username string) int
+		Comment            func(childComplexity int, id string) int
+		Discussion         func(childComplexity int, groupID string) int
+		Group              func(childComplexity int, slug string) int
+		GroupByInviteToken func(childComplexity int, token string) int
+		Groups             func(childComplexity int, limit *int32, offset *int32, ownerID *string, typeArg *model.GroupType) int
+		Me                 func(childComplexity int) int
+		Ping               func(childComplexity int) int
+		Post               func(childComplexity int, id string) int
+		PublicPosts        func(childComplexity int, limit *int32, offset *int32) int
+		SearchArticles     func(childComplexity int, query string, limit *int32, offset *int32) int
+		SearchCommunity    func(childComplexity int, query string, limit *int32, offset *int32) int
+		SearchPosts        func(childComplexity int, query string, limit *int32, offset *int32) int
+		User               func(childComplexity int, username string) int
+		Users              func(childComplexity int) int
 	}
 
 	Subscription struct {
@@ -213,6 +224,7 @@ type ComplexityRoot struct {
 		DisplayName   func(childComplexity int) int
 		Email         func(childComplexity int) int
 		Gender        func(childComplexity int) int
+		Groups        func(childComplexity int) int
 		ID            func(childComplexity int) int
 		IsAdmin       func(childComplexity int) int
 		IsBanned      func(childComplexity int) int
@@ -237,6 +249,11 @@ type DiscussionResolver interface {
 type GroupResolver interface {
 	IsMember(ctx context.Context, obj *model.Group) (bool, error)
 	Posts(ctx context.Context, obj *model.Group, limit *int32, offset *int32) ([]*model.Post, error)
+
+	InviteToken(ctx context.Context, obj *model.Group) (*string, error)
+	JoinRequests(ctx context.Context, obj *model.Group) ([]*model.PublicUser, error)
+	Members(ctx context.Context, obj *model.Group) ([]*model.PublicUser, error)
+	HasPendingRequest(ctx context.Context, obj *model.Group) (bool, error)
 }
 type MutationResolver interface {
 	Empty(ctx context.Context) (*string, error)
@@ -254,6 +271,11 @@ type MutationResolver interface {
 	VotePost(ctx context.Context, postID string, typeArg model.VoteType) (*model.Post, error)
 	VoteComment(ctx context.Context, commentID string, typeArg model.VoteType) (*model.Comment, error)
 	UpdateGroup(ctx context.Context, groupID string, name *string, description *string, icon *string) (*model.Group, error)
+	GenerateGroupInvite(ctx context.Context, groupID string) (string, error)
+	RequestJoinGroup(ctx context.Context, groupID string, token string) (bool, error)
+	AcceptJoinRequest(ctx context.Context, groupID string, userID string) (bool, error)
+	RejectJoinRequest(ctx context.Context, groupID string, userID string) (bool, error)
+	RemoveMember(ctx context.Context, groupID string, userID string) (bool, error)
 	CreateChannel(ctx context.Context, input model.NewChannel) (*model.Channel, error)
 	SendMessage(ctx context.Context, input model.NewMessage) (*model.Message, error)
 	DeleteGroup(ctx context.Context, groupID string) (bool, error)
@@ -283,6 +305,7 @@ type QueryResolver interface {
 	Categories(ctx context.Context) ([]*model.Category, error)
 	Groups(ctx context.Context, limit *int32, offset *int32, ownerID *string, typeArg *model.GroupType) ([]*model.Group, error)
 	Group(ctx context.Context, slug string) (*model.Group, error)
+	GroupByInviteToken(ctx context.Context, token string) (*model.Group, error)
 	Post(ctx context.Context, id string) (*model.Post, error)
 	Comment(ctx context.Context, id string) (*model.Comment, error)
 	PublicPosts(ctx context.Context, limit *int32, offset *int32) ([]*model.Post, error)
@@ -298,6 +321,9 @@ type QueryResolver interface {
 }
 type SubscriptionResolver interface {
 	MessageAdded(ctx context.Context, channelID string) (<-chan *model.Message, error)
+}
+type UserResolver interface {
+	Groups(ctx context.Context, obj *model.User) ([]*model.Group, error)
 }
 
 type executableSchema struct {
@@ -550,6 +576,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Group.Description(childComplexity), true
+	case "Group.hasPendingRequest":
+		if e.complexity.Group.HasPendingRequest == nil {
+			break
+		}
+
+		return e.complexity.Group.HasPendingRequest(childComplexity), true
 	case "Group.id":
 		if e.complexity.Group.ID == nil {
 			break
@@ -562,12 +594,30 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Group.Icon(childComplexity), true
+	case "Group.inviteToken":
+		if e.complexity.Group.InviteToken == nil {
+			break
+		}
+
+		return e.complexity.Group.InviteToken(childComplexity), true
 	case "Group.isMember":
 		if e.complexity.Group.IsMember == nil {
 			break
 		}
 
 		return e.complexity.Group.IsMember(childComplexity), true
+	case "Group.joinRequests":
+		if e.complexity.Group.JoinRequests == nil {
+			break
+		}
+
+		return e.complexity.Group.JoinRequests(childComplexity), true
+	case "Group.members":
+		if e.complexity.Group.Members == nil {
+			break
+		}
+
+		return e.complexity.Group.Members(childComplexity), true
 	case "Group.membersCount":
 		if e.complexity.Group.MembersCount == nil {
 			break
@@ -641,6 +691,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Message.Sender(childComplexity), true
 
+	case "Mutation.acceptJoinRequest":
+		if e.complexity.Mutation.AcceptJoinRequest == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_acceptJoinRequest_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.AcceptJoinRequest(childComplexity, args["groupId"].(string), args["userId"].(string)), true
 	case "Mutation.blockUser":
 		if e.complexity.Mutation.BlockUser == nil {
 			break
@@ -768,6 +829,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.Empty(childComplexity), true
+	case "Mutation.generateGroupInvite":
+		if e.complexity.Mutation.GenerateGroupInvite == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_generateGroupInvite_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.GenerateGroupInvite(childComplexity, args["groupId"].(string)), true
 	case "Mutation.joinGroup":
 		if e.complexity.Mutation.JoinGroup == nil {
 			break
@@ -801,6 +873,39 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.Login(childComplexity, args["input"].(model.LoginInput)), true
+	case "Mutation.rejectJoinRequest":
+		if e.complexity.Mutation.RejectJoinRequest == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_rejectJoinRequest_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RejectJoinRequest(childComplexity, args["groupId"].(string), args["userId"].(string)), true
+	case "Mutation.removeMember":
+		if e.complexity.Mutation.RemoveMember == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_removeMember_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RemoveMember(childComplexity, args["groupId"].(string), args["userId"].(string)), true
+	case "Mutation.requestJoinGroup":
+		if e.complexity.Mutation.RequestJoinGroup == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_requestJoinGroup_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.RequestJoinGroup(childComplexity, args["groupId"].(string), args["token"].(string)), true
 	case "Mutation.sendMessage":
 		if e.complexity.Mutation.SendMessage == nil {
 			break
@@ -1154,6 +1259,17 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.Group(childComplexity, args["slug"].(string)), true
+	case "Query.groupByInviteToken":
+		if e.complexity.Query.GroupByInviteToken == nil {
+			break
+		}
+
+		args, err := ec.field_Query_groupByInviteToken_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.GroupByInviteToken(childComplexity, args["token"].(string)), true
 	case "Query.groups":
 		if e.complexity.Query.Groups == nil {
 			break
@@ -1292,6 +1408,12 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.User.Gender(childComplexity), true
+	case "User.groups":
+		if e.complexity.User.Groups == nil {
+			break
+		}
+
+		return e.complexity.User.Groups(childComplexity), true
 	case "User.id":
 		if e.complexity.User.ID == nil {
 			break
@@ -1552,6 +1674,22 @@ func (ec *executionContext) field_Group_posts_args(ctx context.Context, rawArgs 
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_acceptJoinRequest_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "groupId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["groupId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "userId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg1
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_blockUser_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1673,6 +1811,17 @@ func (ec *executionContext) field_Mutation_deleteGroup_args(ctx context.Context,
 	return args, nil
 }
 
+func (ec *executionContext) field_Mutation_generateGroupInvite_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "groupId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["groupId"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Mutation_joinGroup_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -1703,6 +1852,54 @@ func (ec *executionContext) field_Mutation_login_args(ctx context.Context, rawAr
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_rejectJoinRequest_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "groupId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["groupId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "userId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_removeMember_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "groupId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["groupId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "userId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["userId"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_requestJoinGroup_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "groupId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["groupId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "token", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["token"] = arg1
 	return args, nil
 }
 
@@ -2000,6 +2197,17 @@ func (ec *executionContext) field_Query_discussion_args(ctx context.Context, raw
 		return nil, err
 	}
 	args["groupId"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Query_groupByInviteToken_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "token", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["token"] = arg0
 	return args, nil
 }
 
@@ -3310,6 +3518,14 @@ func (ec *executionContext) fieldContext_Discussion_group(_ context.Context, fie
 				return ec.fieldContext_Group_posts(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -3728,6 +3944,216 @@ func (ec *executionContext) fieldContext_Group_createdAt(_ context.Context, fiel
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_inviteToken(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Group_inviteToken,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Group().InviteToken(ctx, obj)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal *string
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal *string
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, obj, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalOString2ᚖstring,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Group_inviteToken(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_joinRequests(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Group_joinRequests,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Group().JoinRequests(ctx, obj)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal []*model.PublicUser
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal []*model.PublicUser
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, obj, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalOPublicUser2ᚕᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐPublicUserᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Group_joinRequests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PublicUser_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PublicUser_name(ctx, field)
+			case "username":
+				return ec.fieldContext_PublicUser_username(ctx, field)
+			case "displayName":
+				return ec.fieldContext_PublicUser_displayName(ctx, field)
+			case "gender":
+				return ec.fieldContext_PublicUser_gender(ctx, field)
+			case "avatar":
+				return ec.fieldContext_PublicUser_avatar(ctx, field)
+			case "posts":
+				return ec.fieldContext_PublicUser_posts(ctx, field)
+			case "comments":
+				return ec.fieldContext_PublicUser_comments(ctx, field)
+			case "groups":
+				return ec.fieldContext_PublicUser_groups(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PublicUser", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_members(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Group_members,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Group().Members(ctx, obj)
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal []*model.PublicUser
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal []*model.PublicUser
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, obj, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalOPublicUser2ᚕᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐPublicUserᚄ,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Group_members(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PublicUser_id(ctx, field)
+			case "name":
+				return ec.fieldContext_PublicUser_name(ctx, field)
+			case "username":
+				return ec.fieldContext_PublicUser_username(ctx, field)
+			case "displayName":
+				return ec.fieldContext_PublicUser_displayName(ctx, field)
+			case "gender":
+				return ec.fieldContext_PublicUser_gender(ctx, field)
+			case "avatar":
+				return ec.fieldContext_PublicUser_avatar(ctx, field)
+			case "posts":
+				return ec.fieldContext_PublicUser_posts(ctx, field)
+			case "comments":
+				return ec.fieldContext_PublicUser_comments(ctx, field)
+			case "groups":
+				return ec.fieldContext_PublicUser_groups(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PublicUser", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Group_hasPendingRequest(ctx context.Context, field graphql.CollectedField, obj *model.Group) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Group_hasPendingRequest,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.Group().HasPendingRequest(ctx, obj)
+		},
+		nil,
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Group_hasPendingRequest(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Group",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -4416,6 +4842,14 @@ func (ec *executionContext) fieldContext_Mutation_createGroup(ctx context.Contex
 				return ec.fieldContext_Group_posts(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -4949,6 +5383,14 @@ func (ec *executionContext) fieldContext_Mutation_updateGroup(ctx context.Contex
 				return ec.fieldContext_Group_posts(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -4961,6 +5403,301 @@ func (ec *executionContext) fieldContext_Mutation_updateGroup(ctx context.Contex
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateGroup_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_generateGroupInvite(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_generateGroupInvite,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().GenerateGroupInvite(ctx, fc.Args["groupId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal string
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal string
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNString2string,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_generateGroupInvite(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_generateGroupInvite_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_requestJoinGroup(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_requestJoinGroup,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RequestJoinGroup(ctx, fc.Args["groupId"].(string), fc.Args["token"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_requestJoinGroup(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_requestJoinGroup_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_acceptJoinRequest(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_acceptJoinRequest,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().AcceptJoinRequest(ctx, fc.Args["groupId"].(string), fc.Args["userId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_acceptJoinRequest(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_acceptJoinRequest_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_rejectJoinRequest(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_rejectJoinRequest,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RejectJoinRequest(ctx, fc.Args["groupId"].(string), fc.Args["userId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_rejectJoinRequest(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_rejectJoinRequest_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_removeMember(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Mutation_removeMember,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Mutation().RemoveMember(ctx, fc.Args["groupId"].(string), fc.Args["userId"].(string))
+		},
+		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
+			directive0 := next
+
+			directive1 := func(ctx context.Context) (any, error) {
+				requires, err := ec.unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx, "USER")
+				if err != nil {
+					var zeroVal bool
+					return zeroVal, err
+				}
+				if ec.directives.Auth == nil {
+					var zeroVal bool
+					return zeroVal, errors.New("directive auth is not implemented")
+				}
+				return ec.directives.Auth(ctx, nil, directive0, requires)
+			}
+
+			next = directive1
+			return next
+		},
+		ec.marshalNBoolean2bool,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Mutation_removeMember(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_removeMember_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -5494,6 +6231,8 @@ func (ec *executionContext) fieldContext_Mutation_updateUser(ctx context.Context
 				return ec.fieldContext_User_isBanned(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
+			case "groups":
+				return ec.fieldContext_User_groups(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -5812,6 +6551,14 @@ func (ec *executionContext) fieldContext_Post_group(_ context.Context, field gra
 				return ec.fieldContext_Group_posts(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -6379,6 +7126,14 @@ func (ec *executionContext) fieldContext_PublicUser_groups(_ context.Context, fi
 				return ec.fieldContext_Group_posts(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -6714,6 +7469,14 @@ func (ec *executionContext) fieldContext_Query_groups(ctx context.Context, field
 				return ec.fieldContext_Group_posts(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -6797,6 +7560,14 @@ func (ec *executionContext) fieldContext_Query_group(ctx context.Context, field 
 				return ec.fieldContext_Group_posts(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
@@ -6809,6 +7580,79 @@ func (ec *executionContext) fieldContext_Query_group(ctx context.Context, field 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_group_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_groupByInviteToken(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Query_groupByInviteToken,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Query().GroupByInviteToken(ctx, fc.Args["token"].(string))
+		},
+		nil,
+		ec.marshalOGroup2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐGroup,
+		true,
+		false,
+	)
+}
+
+func (ec *executionContext) fieldContext_Query_groupByInviteToken(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "description":
+				return ec.fieldContext_Group_description(ctx, field)
+			case "icon":
+				return ec.fieldContext_Group_icon(ctx, field)
+			case "slug":
+				return ec.fieldContext_Group_slug(ctx, field)
+			case "type":
+				return ec.fieldContext_Group_type(ctx, field)
+			case "owner":
+				return ec.fieldContext_Group_owner(ctx, field)
+			case "membersCount":
+				return ec.fieldContext_Group_membersCount(ctx, field)
+			case "isMember":
+				return ec.fieldContext_Group_isMember(ctx, field)
+			case "posts":
+				return ec.fieldContext_Group_posts(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_groupByInviteToken_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -7439,6 +8283,8 @@ func (ec *executionContext) fieldContext_Query_users(_ context.Context, field gr
 				return ec.fieldContext_User_isBanned(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
+			case "groups":
+				return ec.fieldContext_User_groups(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -7553,6 +8399,8 @@ func (ec *executionContext) fieldContext_Query_me(_ context.Context, field graph
 				return ec.fieldContext_User_isBanned(ctx, field)
 			case "createdAt":
 				return ec.fieldContext_User_createdAt(ctx, field)
+			case "groups":
+				return ec.fieldContext_User_groups(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type User", field.Name)
 		},
@@ -8125,6 +8973,67 @@ func (ec *executionContext) fieldContext_User_createdAt(_ context.Context, field
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _User_groups(ctx context.Context, field graphql.CollectedField, obj *model.User) (ret graphql.Marshaler) {
+	return graphql.ResolveField(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_User_groups,
+		func(ctx context.Context) (any, error) {
+			return ec.resolvers.User().Groups(ctx, obj)
+		},
+		nil,
+		ec.marshalNGroup2ᚕᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐGroupᚄ,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_User_groups(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "User",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_Group_id(ctx, field)
+			case "name":
+				return ec.fieldContext_Group_name(ctx, field)
+			case "description":
+				return ec.fieldContext_Group_description(ctx, field)
+			case "icon":
+				return ec.fieldContext_Group_icon(ctx, field)
+			case "slug":
+				return ec.fieldContext_Group_slug(ctx, field)
+			case "type":
+				return ec.fieldContext_Group_type(ctx, field)
+			case "owner":
+				return ec.fieldContext_Group_owner(ctx, field)
+			case "membersCount":
+				return ec.fieldContext_Group_membersCount(ctx, field)
+			case "isMember":
+				return ec.fieldContext_Group_isMember(ctx, field)
+			case "posts":
+				return ec.fieldContext_Group_posts(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_Group_createdAt(ctx, field)
+			case "inviteToken":
+				return ec.fieldContext_Group_inviteToken(ctx, field)
+			case "joinRequests":
+				return ec.fieldContext_Group_joinRequests(ctx, field)
+			case "members":
+				return ec.fieldContext_Group_members(ctx, field)
+			case "hasPendingRequest":
+				return ec.fieldContext_Group_hasPendingRequest(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type Group", field.Name)
 		},
 	}
 	return fc, nil
@@ -10690,6 +11599,141 @@ func (ec *executionContext) _Group(ctx context.Context, sel ast.SelectionSet, ob
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "inviteToken":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_inviteToken(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "joinRequests":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_joinRequests(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "members":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_members(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+		case "hasPendingRequest":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Group_hasPendingRequest(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -10889,6 +11933,41 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "updateGroup":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_updateGroup(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "generateGroupInvite":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_generateGroupInvite(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "requestJoinGroup":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_requestJoinGroup(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "acceptJoinRequest":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_acceptJoinRequest(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "rejectJoinRequest":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_rejectJoinRequest(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "removeMember":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_removeMember(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -11480,6 +12559,25 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "groupByInviteToken":
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_groupByInviteToken(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "post":
 			field := field
 
@@ -11797,63 +12895,99 @@ func (ec *executionContext) _User(ctx context.Context, sel ast.SelectionSet, obj
 		case "id":
 			out.Values[i] = ec._User_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._User_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "username":
 			out.Values[i] = ec._User_username(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "displayName":
 			out.Values[i] = ec._User_displayName(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "email":
 			out.Values[i] = ec._User_email(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "gender":
 			out.Values[i] = ec._User_gender(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "avatar":
 			out.Values[i] = ec._User_avatar(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "phoneNumber":
 			out.Values[i] = ec._User_phoneNumber(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "setupComplete":
 			out.Values[i] = ec._User_setupComplete(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "isAdmin":
 			out.Values[i] = ec._User_isAdmin(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "isBanned":
 			out.Values[i] = ec._User_isBanned(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "createdAt":
 			out.Values[i] = ec._User_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "groups":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._User_groups(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -13294,6 +14428,53 @@ func (ec *executionContext) marshalOPost2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwik
 		return graphql.Null
 	}
 	return ec._Post(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalOPublicUser2ᚕᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐPublicUserᚄ(ctx context.Context, sel ast.SelectionSet, v []*model.PublicUser) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNPublicUser2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐPublicUser(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
 }
 
 func (ec *executionContext) unmarshalORole2ᚖgithubᚗcomᚋpranavaᚑmohanᚋwikinittᚋgravyᚋgraphᚋmodelᚐRole(ctx context.Context, v any) (*model.Role, error) {

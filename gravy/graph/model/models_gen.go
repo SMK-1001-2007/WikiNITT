@@ -70,17 +70,21 @@ type Discussion struct {
 }
 
 type Group struct {
-	ID           string      `json:"id"`
-	Name         string      `json:"name"`
-	Description  string      `json:"description"`
-	Icon         *string     `json:"icon,omitempty"`
-	Slug         string      `json:"slug"`
-	Type         GroupType   `json:"type"`
-	Owner        *PublicUser `json:"owner"`
-	MembersCount int32       `json:"membersCount"`
-	IsMember     bool        `json:"isMember"`
-	Posts        []*Post     `json:"posts"`
-	CreatedAt    string      `json:"createdAt"`
+	ID                string        `json:"id"`
+	Name              string        `json:"name"`
+	Description       string        `json:"description"`
+	Icon              *string       `json:"icon,omitempty"`
+	Slug              string        `json:"slug"`
+	Type              GroupType     `json:"type"`
+	Owner             *PublicUser   `json:"owner"`
+	MembersCount      int32         `json:"membersCount"`
+	IsMember          bool          `json:"isMember"`
+	Posts             []*Post       `json:"posts"`
+	CreatedAt         string        `json:"createdAt"`
+	InviteToken       *string       `json:"inviteToken,omitempty"`
+	JoinRequests      []*PublicUser `json:"joinRequests,omitempty"`
+	Members           []*PublicUser `json:"members,omitempty"`
+	HasPendingRequest bool          `json:"hasPendingRequest"`
 }
 
 func (Group) IsCommunityResult() {}
@@ -197,18 +201,19 @@ type UpdateUserInput struct {
 }
 
 type User struct {
-	ID            string `json:"id"`
-	Name          string `json:"name"`
-	Username      string `json:"username"`
-	DisplayName   string `json:"displayName"`
-	Email         string `json:"email"`
-	Gender        string `json:"gender"`
-	Avatar        string `json:"avatar"`
-	PhoneNumber   string `json:"phoneNumber"`
-	SetupComplete bool   `json:"setupComplete"`
-	IsAdmin       bool   `json:"isAdmin"`
-	IsBanned      bool   `json:"isBanned"`
-	CreatedAt     string `json:"createdAt"`
+	ID            string   `json:"id"`
+	Name          string   `json:"name"`
+	Username      string   `json:"username"`
+	DisplayName   string   `json:"displayName"`
+	Email         string   `json:"email"`
+	Gender        string   `json:"gender"`
+	Avatar        string   `json:"avatar"`
+	PhoneNumber   string   `json:"phoneNumber"`
+	SetupComplete bool     `json:"setupComplete"`
+	IsAdmin       bool     `json:"isAdmin"`
+	IsBanned      bool     `json:"isBanned"`
+	CreatedAt     string   `json:"createdAt"`
+	Groups        []*Group `json:"groups"`
 }
 
 type ChannelType string

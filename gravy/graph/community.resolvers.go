@@ -990,7 +990,8 @@ func (r *queryResolver) PublicGroups(ctx context.Context, limit *int32, offset *
 	}
 
 	filter := community.GroupFilter{}
-	*filter.Type = community.GroupTypePublic
+	t := community.GroupTypePublic
+	filter.Type = &t
 
 	groups, err := r.CommunityRepo.ListGroups(ctx, filter, l, o)
 	if err != nil {

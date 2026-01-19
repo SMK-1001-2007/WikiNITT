@@ -630,9 +630,10 @@ func (r *repository) ListPostsByAuthor(ctx context.Context, authorID string, lim
 func (r *repository) ListPublicPostsByAuthor(ctx context.Context, authorID string, limit, offset int) ([]*Post, error) {
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: bson.M{"authorId": authorID}}},
+		{{Key: "$addFields", Value: bson.M{"groupIdObj": bson.M{"$toObjectId": "$groupId"}}}},
 		{{Key: "$lookup", Value: bson.M{
 			"from":         "groups",
-			"localField":   "groupId",
+			"localField":   "groupIdObj",
 			"foreignField": "_id",
 			"as":           "group",
 		}}},
@@ -761,16 +762,18 @@ func (r *repository) ListCommentsByAuthor(ctx context.Context, authorID string, 
 func (r *repository) ListPublicCommentsByAuthor(ctx context.Context, authorID string, limit, offset int) ([]*Comment, error) {
 	pipeline := mongo.Pipeline{
 		{{Key: "$match", Value: bson.M{"authorId": authorID}}},
+		{{Key: "$addFields", Value: bson.M{"postIdObj": bson.M{"$toObjectId": "$postId"}}}},
 		{{Key: "$lookup", Value: bson.M{
 			"from":         "posts",
-			"localField":   "postId",
+			"localField":   "postIdObj",
 			"foreignField": "_id",
 			"as":           "post",
 		}}},
 		{{Key: "$unwind", Value: "$post"}},
+		{{Key: "$addFields", Value: bson.M{"groupIdObj": bson.M{"$toObjectId": "$post.groupId"}}}},
 		{{Key: "$lookup", Value: bson.M{
 			"from":         "groups",
-			"localField":   "post.groupId",
+			"localField":   "groupIdObj",
 			"foreignField": "_id",
 			"as":           "group",
 		}}},

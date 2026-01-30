@@ -10,15 +10,10 @@ import {
   Home,
   BookOpen,
   Users,
-  Building2,
-  GraduationCap,
-  Tent,
-  PartyPopper,
   Menu,
   X,
   Search,
   User,
-  Settings,
   LogOut,
   ChevronRight,
   Loader2,
@@ -35,7 +30,7 @@ function cn(...inputs: (string | undefined | null | false)[]) {
   return twMerge(clsx(inputs));
 }
 
-function UserMenu() {
+export function UserMenu() {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
@@ -192,30 +187,15 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     { name: "Home", href: "/", icon: Home, section: "main" },
     { name: "Articles", href: "/articles", icon: BookOpen, section: "main" },
     { name: "Community", href: "/c", icon: Users, section: "main" },
-    {
-      name: "Departments",
-      href: "/departments",
-      icon: Building2,
-      section: "explore",
-    },
-    {
-      name: "Hostels",
-      href: "/hostels",
-      icon: Tent,
-      section: "explore",
-    },
-
-    {
-      name: "Student Life",
-      href: "/student-life",
-      icon: GraduationCap,
-      section: "explore",
-    },
   ];
 
   const isAdmin = pathname?.startsWith("/admin");
 
   if (isAdmin) {
+    return <>{children}</>;
+  }
+
+  if (pathname === "/") {
     return <>{children}</>;
   }
 
@@ -268,7 +248,6 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="flex items-center">
-              {}
               <button
                 type="button"
                 onClick={() => setIsSearchOpen(true)}

@@ -1,6 +1,7 @@
 import os
 import json
 from urllib.parse import urlparse
+import hashlib
 
 class BabluPipeline:
     def open_spider(self, spider):
@@ -13,20 +14,18 @@ class BabluPipeline:
         content = item['body']
         content_type = item.get('content_type', '')
 
-        # 1. Generate Clean Filename
         parsed = urlparse(url)
         clean_name = parsed.path.strip("/").replace("/", "_").replace(".php", "").replace(".aspx", "")
         if not clean_name: clean_name = "home_index"
+        url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()[:8]
         
-        # Determine extensions
         is_pdf = "pdf" in content_type or url.endswith(".pdf")
         data_ext = ".pdf" if is_pdf else ".html"
         
-        filename_base = clean_name
+        filename_base = f"{clean_name}_{url_hash}"
         data_filename = f"{filename_base}{data_ext}"
-        meta_filename = f"{filename_base}.meta.json" # <--- The Sidecar File
+        meta_filename = f"{filename_base}.meta.json"
 
-        # 2. Save the Content File (HTML/PDF)
         filepath = os.path.join(self.output_dir, data_filename)
         mode = "wb" if is_pdf else "w"
         encoding = None if is_pdf else "utf-8"
@@ -37,8 +36,6 @@ class BabluPipeline:
         with open(filepath, mode, encoding=encoding) as f:
             f.write(content)
 
-        # 3. Save the Sidecar Metadata File
-        # This contains the URL and other useful info for the DB
         meta_filepath = os.path.join(self.output_dir, meta_filename)
         metadata = {
             "url": url,

@@ -12,7 +12,8 @@ class NittSpider(RedisCrawlSpider):
     rules = (
         Rule(
             LinkExtractor(
-                allow=r'^https?://(www\.)?nitt\.edu/'
+                allow=r'^https?://(www\.)?nitt\.edu/',
+                deny_extensions=[], 
             ), 
             callback='parse_item', 
             follow=True

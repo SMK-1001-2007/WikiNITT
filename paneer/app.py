@@ -3,7 +3,7 @@ import sys
 
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_mistralai import ChatMistralAI
 from langchain_core.tools import Tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
@@ -14,15 +14,15 @@ load_dotenv()
 
 DB_DIRECTORY = "nitt_vector_db"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY")
+MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
 def format_docs(docs):
     """Helper to join retrieved document chunks into a single string."""
     return "\n\n".join(doc.page_content for doc in docs)
 
 def start_wikinitt_chat():
-    if not GOOGLE_API_KEY:
-        print("Error: GOOGLE_API_KEY not found. Please set it.")
+    if not MISTRAL_API_KEY:
+        print("Error: MISTRAL_API_KEY not found. Please set it.")
         return
 
     if not os.path.exists(DB_DIRECTORY):
@@ -53,76 +53,91 @@ def start_wikinitt_chat():
     tools = [tool]
     tools_map = {t.name: t for t in tools}
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
+    llm = ChatMistralAI(
+        model="mistral-small-latest",
         temperature=0.3,
-        google_api_key=GOOGLE_API_KEY
+        mistral_api_key=MISTRAL_API_KEY
     )
     
     llm_with_tools = llm.bind_tools(tools)
 
-    system_message = SystemMessage(content="""You are WikiNITT, the helpful and intelligent AI assistant for NIT Trichy.
+    system_message = SystemMessage(content="""You are WikiNITT, an intelligent and deep-thinking AI assistant for NIT Trichy.
 
-    CORE INSTRUCTIONS:
-    1. **Deep Thinking**: Before answering, verify if you have enough information. If not, use the `search_nitt_data` tool to find it.
-    2. **Chat Awareness**: The conversation history is provided.
-    3. **Honesty**: If the tool doesn't return relevant info, admit you don't know rather than hallucinating.
-    4. **Friendliness**: Be polite and concise.
+    CORE RESPONSIBILITIES:
+    1. **Deep Reasoning**: Do not just answer immediately. Think about what information you need.
+    2. **Multi-Step Search**: If the user's query is complex, break it down. You can search multiple times if the first search doesn't give you everything.
+    3. **Context Awareness**: Remember previous interactions.
+    4. **Honesty & Clarity**: If you cannot find the answer in the context or tools, admit it. Do not hallucinate.
+
+    PROCESS:
+    - Step 1: Analyze the user's request.
+    - Step 2: Formulate a plan. Ask yourself "What do I need to know?".
+    - Step 3: Use the `search_nitt_data` tool to gather facts.
+    - Step 4: Analyze the search results. Is it enough? If not, search again with a better query.
+    - Step 5: Synthesize the final answer.
     """)
 
     print("\n" + "="*50)
-    print("🤖 WikiNITT is Ready! (Agentic Mode - LCEL)")
+    print("🤖 WikiNITT is Ready! (Deep Agentic Mode - Mistral)")
     print("="*50 + "\n")
 
     chat_history = [] 
 
     while True:
-        user_input = input("You: ")
-        if user_input.lower() in ["exit", "quit", "q"]:
-            break
-        
         try:
+            user_input = input("You: ")
+            if user_input.lower() in ["exit", "quit", "q"]:
+                break
+            
             messages = [system_message] + chat_history + [HumanMessage(content=user_input)]
             
-            response_1 = llm_with_tools.invoke(messages)
+            print("   (🧠 Thinking...)")
             
-            final_answer = ""
-            
-            if response_1.tool_calls:
-                messages.append(response_1)
+            # Dynamic Agent Loop
+            while True:
+                response = llm_with_tools.invoke(messages)
+                messages.append(response)
                 
-                for tool_call in response_1.tool_calls:
+                if not response.tool_calls:
+                    final_answer = response.content
+                    
+                    if not final_answer or (isinstance(final_answer, str) and not final_answer.strip()):
+                        print("   (⚠️ Model returned empty response. Retrying with a nudge...)")
+                        messages.append(HumanMessage(content="Please provide your answer or use a tool."))
+                        continue
+
+                    print(f"\nWikiNITT: {final_answer}\n")
+                    
+                    chat_history.append(HumanMessage(content=user_input))
+                    chat_history.append(AIMessage(content=str(final_answer)))
+                    break
+                
+                if len(messages) > 20: 
+                    print("   (⚠️ Max recursion depth reached. Stopping.)")
+                    break
+
+                for tool_call in response.tool_calls:
                     tool_name = tool_call["name"]
                     tool_args = tool_call["args"]
                     
                     if tool_name in tools_map:
-                        tool_result = tools_map[tool_name].invoke(tool_args)
+                        print(f"   (🛠️  Tool Call: {tool_name})") 
+                        
+                        try:
+                            tool_result = tools_map[tool_name].invoke(tool_args)
+                        except Exception as tool_err:
+                            tool_result = f"Error executing tool: {tool_err}"
                         
                         messages.append(ToolMessage(
                             tool_call_id=tool_call["id"],
-                            content=tool_result
+                            content=str(tool_result)
                         ))
-                
-                response_2 = llm_with_tools.invoke(messages)
-                final_content = response_2.content
-            else:
-                final_content = response_1.content
-            
-            final_answer = ""
-            if isinstance(final_content, str):
-                final_answer = final_content
-            elif isinstance(final_content, list):
-                final_answer = "".join([
-                    part.get("text", "") for part in final_content 
-                    if isinstance(part, dict) and "text" in part
-                ])
-            else:
-                final_answer = str(final_content)
-            
-            print(f"\nWikiNITT: {final_answer}\n")
-
-            chat_history.append(HumanMessage(content=user_input))
-            chat_history.append(AIMessage(content=final_answer))
+                    else:
+                        print(f"   (⚠️ Unknown Tool: {tool_name})")
+                        messages.append(ToolMessage(
+                            tool_call_id=tool_call["id"],
+                            content=f"Error: Tool '{tool_name}' not found. Please use a valid tool."
+                        ))
 
         except Exception as e:
             print(f"⚠️ Error: {e}")

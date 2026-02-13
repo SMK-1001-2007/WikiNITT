@@ -7,12 +7,16 @@ from langchain_mistralai import ChatMistralAI
 from langchain_core.tools import Tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
+from langchain_classic.storage import LocalFileStore, create_kv_docstore
+from langchain_classic.retrievers.parent_document_retriever import ParentDocumentRetriever
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_DIRECTORY = "nitt_vector_db"
+DB_DIRECTORY = "bablu/nitt_vector_db"
+PARENT_STORE_DIRECTORY = "bablu/nitt_parent_store"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
@@ -37,12 +41,26 @@ def get_chat_agent():
     print("Loading Embedding Model...")
     embedding_function = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
-    print(f"Loading Database...")
+    print(f"Loading Database from {DB_DIRECTORY}...")
     vector_db = Chroma(
         persist_directory=DB_DIRECTORY, 
-        embedding_function=embedding_function
+        embedding_function=embedding_function,
+        collection_name="nitt_data"
     )
-    retriever = vector_db.as_retriever(search_kwargs={"k": 5})
+    
+    print(f"Loading Parent Store from {PARENT_STORE_DIRECTORY}...")
+    fs_store = LocalFileStore(PARENT_STORE_DIRECTORY)
+    store = create_kv_docstore(fs_store)
+    
+    child_splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=32)
+    parent_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
+
+    retriever = ParentDocumentRetriever(
+        vectorstore=vector_db,
+        docstore=store,
+        child_splitter=child_splitter,
+        parent_splitter=parent_splitter,
+    )
     
     def search_nitt_func(query: str):
         """Searches for information about NIT Trichy."""

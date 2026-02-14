@@ -117,3 +117,9 @@ if GROQ_API_KEYS == [""]:
     GROQ_API_KEYS = []
 VECTOR_DB_PATH = "nitt_vector_db"
 PARENT_STORE_PATH = "nitt_parent_store"
+
+# BFS Settings - Using PriorityQueue (with DEPTH_PRIORITY) allows us to prioritize PDFs WITHIN each depth level
+DEPTH_PRIORITY = 50
+SCHEDULER_QUEUE_CLASS = 'scrapy_redis.queue.PriorityQueue'
+# SCHEDULER_DISK_QUEUE = 'scrapy.squeues.PickleFifoDiskQueue'
+# SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'

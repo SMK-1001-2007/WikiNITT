@@ -1,57 +1,66 @@
-# spiders/nitt_spider.py
-import scrapy
-import json
-import os
-from urllib.parse import urlparse
+from scrapy_redis.spiders import RedisCrawlSpider
+from scrapy.linkextractors import LinkExtractor
+from scrapy.spiders import Rule
 from bablu.items import NittRagItem
-import fitz # PyMuPDF
-import pymupdf4llm 
+import fitz
+import pymupdf4llm
 
-class NittSpider(scrapy.Spider):
-    name = "nitt"
-    allowed_domains = ["nitt.edu"]
-    start_urls = ["https://www.nitt.edu/"]
 
-    PROCESSED_LOG_PATH = "nitt_vector_db/processed_urls.json" 
-    processed_urls = set()
+class NittSpider(RedisCrawlSpider):
+    name = 'nitt'
+    redis_key = 'nitt:start_urls'
+    
+    allowed_domains = ['nitt.edu']
 
-    def start_requests(self):
-        if os.path.exists(self.PROCESSED_LOG_PATH):
-            try:
-                with open(self.PROCESSED_LOG_PATH, "r") as f:
-                    self.processed_urls = set(json.load(f))
-                self.logger.info(f"🔄 RESUMING: Found {len(self.processed_urls)} already indexed URLs.")
-            except:
-                self.logger.warning("⚠️ Could not load processed log. Starting fresh check.")
-        
-        for url in self.start_urls:
-            yield scrapy.Request(url, self.parse)
+    rules = (
+        Rule(
+            LinkExtractor(
+                allow=[r'faculty', r'people', r'curriculum', r'academics', r'dept', r'profile'],
+                deny=[
+                    r'login', r'register', r'resetPasswd', r'reSendKey', r'subaction', r'action', r'\+', r'tender'
+                ],
+                deny_extensions=[]  # Ensure PDFs are scraped
+            ),
+            callback='parse',
+            follow=True,
+            process_request='set_priority'
+        ),
+        Rule(
+            LinkExtractor(
+                allow=r'^https?://(www\.)?nitt\.edu/',
+                deny=[
+                    r'login', r'register', r'resetPasswd', r'reSendKey', r'subaction', r'action', r'\+', r'tender'
+                ],
+                deny_extensions=[], 
+            ), 
+            callback='parse', 
+            follow=True,
+            process_request='set_priority'
+        ),
+    )
+
+    def set_priority(self, request, response):
+        if request.url.lower().endswith(".pdf"):
+            request.priority = 10
+        else:
+            request.priority = 0
+        return request
 
     def parse(self, response):
-        if response.url in self.processed_urls:
-            self.logger.info(f"⏭️  SKIPPING CONTENT (Already Indexed): {response.url}")
-        else:
-            if self._is_pdf(response):
-                yield from self.parse_pdf(response)
-                return 
+        
+        if self._is_pdf(response):
+            yield from self.parse_pdf(response)
+            return 
 
-            item = NittRagItem()
-            item['url'] = response.url
-            item['file_type'] = 'html'
-            item['title'] = response.css('title::text').get()
+        item = NittRagItem()
+        item['url'] = response.url
+        item['file_type'] = 'html'
+        item['title'] = response.css('title::text').get()
             
-            body_text = response.css('body *::text').getall()
-            item['raw_text'] = " ".join(body_text) if body_text else ""
+        body_text = response.css('body *::text').getall()
+        item['raw_text'] = " ".join(body_text) if body_text else ""
             
-            yield item
-
-        for href in response.css('a::attr(href)').getall():
-            absolute_url = response.urljoin(href)
-            
-            domain = urlparse(absolute_url).netloc.lower()
-            
-            if domain in ["nitt.edu", "www.nitt.edu"]:
-                yield response.follow(absolute_url, self.parse)
+        yield item
 
     def parse_pdf(self, response):
         item = NittRagItem()

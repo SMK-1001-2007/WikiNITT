@@ -363,8 +363,8 @@ async def add_document(doc: AdminDocument, process: bool = False):
     except ValueError as ve:
         print(f"CRITICAL ERROR in add_documents: {ve}")
         # Validating likely cause
-        print(f"Docs list: {[new_doc]}")
-        print(f"IDs list: {[doc_id]}")
+        # print(f"Docs list: {[new_doc]}")
+        # print(f"IDs list: {[doc_id]}")
         raise HTTPException(status_code=500, detail=f"Retriever Error: {str(ve)}")
     except Exception as e:
         print(f"UNEXPECTED ERROR in add_documents: {e}")

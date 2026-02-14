@@ -20,9 +20,10 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 GROQ_API_KEYS = os.getenv("GROQ_API_KEYS")
 
 # Postgres & Chroma Settings
-POSTGRES_CONNECTION_STRING = "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store"
-CHROMA_HOST = "localhost"
-CHROMA_PORT = 8001
+# Postgres & Chroma Settings
+POSTGRES_CONNECTION_STRING = os.getenv('POSTGRES_CONNECTION_STRING', "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store")
+CHROMA_HOST = os.getenv('CHROMA_HOST', "localhost")
+CHROMA_PORT = int(os.getenv('CHROMA_PORT', 8001))
 
 
 def format_docs(docs):

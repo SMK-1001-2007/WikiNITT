@@ -92,8 +92,8 @@ DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
 
 SCHEDULER_PERSIST = True
 
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 
 SCHEDULER_IDLE_BEFORE_CLOSE = 10
 REDIS_START_URLS_BATCH_SIZE = 16
@@ -117,9 +117,9 @@ if GROQ_API_KEYS == [""]:
     GROQ_API_KEYS = []
 
 # Postgres & Chroma Settings
-POSTGRES_CONNECTION_STRING = "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store"
-CHROMA_HOST = "localhost"
-CHROMA_PORT = 8001
+POSTGRES_CONNECTION_STRING = os.getenv('POSTGRES_CONNECTION_STRING', "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store")
+CHROMA_HOST = os.getenv('CHROMA_HOST', "localhost")
+CHROMA_PORT = int(os.getenv('CHROMA_PORT', 8001))
 
 # BFS Settings - Using PriorityQueue (with DEPTH_PRIORITY) allows us to prioritize PDFs WITHIN each depth level
 DEPTH_PRIORITY = 50

@@ -1,0 +1,126 @@
+services:
+  gravy:
+    build:
+      context: ./gravy
+      dockerfile: Dockerfile
+    container_name: gravy
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./gravy:/app
+    environment:
+      - MEILI_HOST=http://meilisearch:7700
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MONGODB_URI=${MONGODB_URI}
+      - MACHINE_TOKEN=${MACHINE_TOKEN}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - JWT_SECRET=${JWT_SECRET}
+    depends_on:
+      - meilisearch
+    networks:
+      - wikinitt-network
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.23.0
+    environment:
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - MEILI_ENV=production
+    ports:
+      - "7700:7700"
+    volumes:
+      - meili-data:/data
+    restart: unless-stopped
+    networks:
+      - wikinitt-network
+
+  paneer-api:
+    build:
+      context: ./paneer
+      dockerfile: Dockerfile
+    container_name: paneer-api
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./paneer:/app
+    environment:
+      - POSTGRES_CONNECTION_STRING=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/nitt_rag_store
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GROQ_API_KEYS=${GROQ_API_KEYS}
+    depends_on:
+      - postgres
+      - chroma
+      - redis
+    networks:
+      - wikinitt-network
+
+  bablu-scraper:
+    build:
+      context: ./paneer
+      dockerfile: Dockerfile.bablu
+    container_name: bablu-scraper
+    environment:
+      - POSTGRES_CONNECTION_STRING=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/nitt_rag_store
+      - CHROMA_HOST=chroma
+      - CHROMA_PORT=8000
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - GROQ_API_KEYS=${GROQ_API_KEYS}
+    depends_on:
+      - postgres
+      - chroma
+      - redis
+    networks:
+      - wikinitt-network
+    # command: ["tail", "-f", "/dev/null"] 
+
+  postgres:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: nitt_rag_store
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_nitt:/var/lib/postgresql/data
+    networks:
+      - wikinitt-network
+
+  chroma:
+    image: chromadb/chroma:latest
+    restart: unless-stopped
+    environment:
+      - IS_PERSISTENT=TRUE
+      - ANONYMIZED_TELEMETRY=False
+    volumes:
+      - chroma_data_nitt:/chroma/chroma
+    ports:
+      - "8001:8000"
+    networks:
+      - wikinitt-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - wikinitt-network
+
+volumes:
+  meili-data:
+  postgres_data_nitt:
+  chroma_data_nitt:
+  redis_data:
+
+networks:
+  wikinitt-network:
+    driver: bridge

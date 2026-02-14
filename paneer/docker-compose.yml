@@ -1,0 +1,25 @@
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: nitt_user
+      POSTGRES_PASSWORD: nitt_password
+      POSTGRES_DB: nitt_rag_store
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_nitt:/var/lib/postgresql/data
+
+  chroma:
+    image: chromadb/chroma:latest
+    environment:
+      - IS_PERSISTENT=TRUE
+    volumes:
+      - chroma_data_nitt:/chroma/chroma
+    ports:
+      - "8001:8000"
+
+volumes:
+  postgres_data_nitt:
+  chroma_data_nitt:

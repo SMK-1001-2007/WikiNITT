@@ -12,8 +12,11 @@ from langchain_classic.retrievers.parent_document_retriever import ParentDocumen
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
 from langchain_groq import ChatGroq
-import time
-
+import sys
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+        
+from postgres_store import PostgresByteStore
+from langchain_classic.storage import create_kv_docstore
 from bs4 import BeautifulSoup
 import re
 
@@ -33,16 +36,16 @@ class SmartRagPipeline:
         text = re.sub(r'Copyright © \d+ National Institute of Technology', '', text)
         return text
 
-    def __init__(self, groq_api_keys, db_dir, parent_store_dir):
+    def __init__(self, groq_api_keys, pg_conn_str, chroma_host, chroma_port):
         self.groq_api_keys = groq_api_keys
         self.current_key_idx = 0
         
-        self.db_dir = db_dir
-        self.parent_store_dir = parent_store_dir
+        self.pg_conn_str = pg_conn_str
+        self.chroma_host = chroma_host
+        self.chroma_port = chroma_port
+        
         self.buffer = [] 
         self.BUFFER_SIZE = 5 
-        self.processed_log_path = os.path.join(db_dir, "processed_urls.json")
-        self.processed_urls = set()
         
         self.llm = None
 
@@ -50,8 +53,9 @@ class SmartRagPipeline:
     def from_crawler(cls, crawler):
         return cls(
             groq_api_keys=crawler.settings.get('GROQ_API_KEYS'),
-            db_dir=crawler.settings.get('VECTOR_DB_PATH', 'nitt_vector_db'),
-            parent_store_dir=crawler.settings.get('PARENT_STORE_PATH', 'nitt_parent_store')
+            pg_conn_str=crawler.settings.get('POSTGRES_CONNECTION_STRING'),
+            chroma_host=crawler.settings.get('CHROMA_HOST'),
+            chroma_port=crawler.settings.get('CHROMA_PORT')
         )
 
     def _setup_llm(self):
@@ -73,24 +77,18 @@ class SmartRagPipeline:
         if not self.groq_api_keys or not isinstance(self.groq_api_keys, list):
             raise ValueError("⚠️ GROQ_API_KEYS must be a list in settings.py!")
 
-        if not os.path.exists(self.db_dir):
-            os.makedirs(self.db_dir)
-        if os.path.exists(self.processed_log_path):
-            with open(self.processed_log_path, "r") as f:
-                self.processed_urls = set(json.load(f))
-        
         self.embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        
+        import chromadb
+        client = chromadb.HttpClient(host=self.chroma_host, port=self.chroma_port)
+        
         self.vectorstore = Chroma(
+            client=client,
             collection_name="nitt_data",
             embedding_function=self.embeddings,
-            persist_directory=self.db_dir
         )
-        
-        # FIX: Wrap LocalFileStore to handle Document serialization
-        from langchain_classic.storage import create_kv_docstore
-        from langchain_classic.storage import LocalFileStore
 
-        fs_store = LocalFileStore(self.parent_store_dir)
+        fs_store = PostgresByteStore(connection_string=self.pg_conn_str, table_name="doc_store")
         store = create_kv_docstore(fs_store)
         
         child_splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=32)
@@ -108,14 +106,9 @@ class SmartRagPipeline:
     def close_spider(self, spider):
         if self.buffer:
             self.process_batch(self.buffer)
-        with open(self.processed_log_path, "w") as f:
-            json.dump(list(self.processed_urls), f)
         logging.info("✅ RAG Pipeline: Ingestion complete.")
 
     def process_item(self, item, spider):
-        if item['url'] in self.processed_urls:
-            raise DropItem(f"Duplicate: {item['url']}")
-
         if item['file_type'] == 'pdf':
             clean_text = item['raw_text'].strip()
         else:
@@ -204,7 +197,6 @@ class SmartRagPipeline:
                             }
                         )
                         cleaned_docs_to_index.append(doc)
-                        self.processed_urls.add(original_item['url'])
 
             logging.info(f"📊 Documents to Index: {len(cleaned_docs_to_index)}")
             if cleaned_docs_to_index:
@@ -213,17 +205,6 @@ class SmartRagPipeline:
 
         except Exception as e:
             logging.error(f"❌ Batch Processing Failed: {e}")
-
-        for item in items:
-            self.processed_urls.add(item['url'])
-            
-        temp_file = self.processed_log_path + ".tmp"
-        try:
-            with open(temp_file, "w") as f:
-                json.dump(list(self.processed_urls), f)
-            os.replace(temp_file, self.processed_log_path) 
-        except Exception as e:
-            logging.error(f"⚠️ Failed to save progress log: {e}")
 
     def _create_audit_prompt(self, docs):
         docs_text = ""

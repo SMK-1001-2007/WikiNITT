@@ -115,8 +115,11 @@ ITEM_PIPELINES = {
 GROQ_API_KEYS = os.getenv("GROQ_API_KEYS", "").split(",")
 if GROQ_API_KEYS == [""]:
     GROQ_API_KEYS = []
-VECTOR_DB_PATH = "nitt_vector_db"
-PARENT_STORE_PATH = "nitt_parent_store"
+
+# Postgres & Chroma Settings
+POSTGRES_CONNECTION_STRING = "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store"
+CHROMA_HOST = "localhost"
+CHROMA_PORT = 8001
 
 # BFS Settings - Using PriorityQueue (with DEPTH_PRIORITY) allows us to prioritize PDFs WITHIN each depth level
 DEPTH_PRIORITY = 50

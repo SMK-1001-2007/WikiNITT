@@ -1,25 +1,29 @@
 import os
-import sys
+import json
+import chromadb
 
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from utils import RotatingGroqChat
 from pydantic import BaseModel, Field
 from langchain_core.tools import Tool
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
-from langchain_classic.storage import LocalFileStore, create_kv_docstore
+from langchain_classic.storage import create_kv_docstore
 from langchain_classic.retrievers.parent_document_retriever import ParentDocumentRetriever
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from dotenv import load_dotenv
+from postgres_store import PostgresByteStore
 
 load_dotenv()
 
-DB_DIRECTORY = "bablu/nitt_vector_db"
-PARENT_STORE_DIRECTORY = "bablu/nitt_parent_store"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 GROQ_API_KEYS = os.getenv("GROQ_API_KEYS")
+
+# Postgres & Chroma Settings
+POSTGRES_CONNECTION_STRING = "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store"
+CHROMA_HOST = "localhost"
+CHROMA_PORT = 8001
+
 
 def format_docs(docs):
     """Helper to join retrieved document chunks into a single string."""
@@ -32,23 +36,28 @@ def format_docs(docs):
 
 
 def get_retriever():
-    if not os.path.exists(DB_DIRECTORY):
-        print(f"Error: DB directory '{DB_DIRECTORY}' not found.")
-        return None
-
     print("Loading Embedding Model...")
     embedding_function = HuggingFaceEmbeddings(model_name=EMBEDDING_MODEL)
 
-    print(f"Loading Database from {DB_DIRECTORY}...")
-    vector_db = Chroma(
-        persist_directory=DB_DIRECTORY, 
-        embedding_function=embedding_function,
-        collection_name="nitt_data"
-    )
+    print(f"Connecting to Remote ChromaDB at {CHROMA_HOST}:{CHROMA_PORT}...")
+    try:
+        client = chromadb.HttpClient(host=CHROMA_HOST, port=CHROMA_PORT)
+        vector_db = Chroma(
+            client=client,
+            embedding_function=embedding_function,
+            collection_name="nitt_data"
+        )
+    except Exception as e:
+        print(f"Error connecting to ChromaDB: {e}")
+        return None
     
-    print(f"Loading Parent Store from {PARENT_STORE_DIRECTORY}...")
-    fs_store = LocalFileStore(PARENT_STORE_DIRECTORY)
-    store = create_kv_docstore(fs_store)
+    print(f"Connecting to Parent Store (Postgres)...")
+    try:
+        fs_store = PostgresByteStore(connection_string=POSTGRES_CONNECTION_STRING, table_name="doc_store")
+        store = create_kv_docstore(fs_store)
+    except Exception as e:
+        print(f"Error connecting to Postgres: {e}")
+        return None
     
     child_splitter = RecursiveCharacterTextSplitter(chunk_size=256, chunk_overlap=32)
     parent_splitter = RecursiveCharacterTextSplitter(chunk_size=2000, chunk_overlap=200)
@@ -62,7 +71,6 @@ def get_retriever():
     return retriever
 
 def get_chat_agent():
-    # Helper to parse keys if string
     api_keys = []
     if GROQ_API_KEYS:
         if GROQ_API_KEYS.startswith('['):
@@ -97,8 +105,6 @@ def get_chat_agent():
     )
     tools = [tool]
     
-    # Use our new RotatingGroqChat wrapper
-    # Using the model from RagProcessor as requested/approved
     llm = RotatingGroqChat(
         api_keys=api_keys,
         model_name="llama-3.1-8b-instant",

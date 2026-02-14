@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation'; // Import useRouter
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './chat.module.css';
+import { CHAT_ENDPOINT } from '@/lib/chat';
 
 const ArrowLeftIcon = () => (
   <svg stroke="currentColor" fill="none" strokeWidth="2" viewBox="0 0 24 24" height="1.2em" width="1.2em">
@@ -81,7 +82,7 @@ export default function ChatPage() {
     }]);
 
     try {
-      const response = await fetch('http://localhost:8000/chat', {
+      const response = await fetch(`${CHAT_ENDPOINT}/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -7,8 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CHAT_ENDPOINT } from '@/lib/chat';
 
-// ... interfaces
 interface AdminDocument {
     id: string;
     source_url: string;
@@ -52,7 +52,7 @@ export default function RagAdminPage() {
         setLoading(true);
         try {
             const query = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
-            const res = await fetch(`http://localhost:8000/admin/documents?page=${pageNum}&limit=${LIMIT}${query}`);
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/documents?page=${pageNum}&limit=${LIMIT}${query}`);
             if (!res.ok) throw new Error('Failed to fetch documents');
             const data = await res.json();
             setDocuments(data.items);
@@ -75,7 +75,7 @@ export default function RagAdminPage() {
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this document?')) return;
         try {
-            const res = await fetch(`http://localhost:8000/admin/documents/${id}`, {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/documents/${id}`, {
                 method: 'DELETE',
             });
             if (!res.ok) throw new Error('Failed to delete');
@@ -97,7 +97,7 @@ export default function RagAdminPage() {
         if (!confirm(`Are you sure you want to delete ${selectedIds.size} documents?`)) return;
 
         try {
-            const res = await fetch('http://localhost:8000/admin/documents/delete', {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/documents/delete`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ ids: Array.from(selectedIds) })
@@ -143,7 +143,7 @@ export default function RagAdminPage() {
         if (!confirm('Start a new crawl? This might take a while.')) return;
         setCrawlStatus('Crawling started...');
         try {
-            const res = await fetch('http://localhost:8000/admin/crawl', {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/crawl`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ pages: 20 })

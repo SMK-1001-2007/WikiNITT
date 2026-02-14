@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { FileText, Upload, Loader2, Sparkles } from 'lucide-react';
+import { CHAT_ENDPOINT } from '@/lib/chat';
 
 export default function AddDocumentForm({ onAdd }: { onAdd: () => void }) {
     const [isOpen, setIsOpen] = useState(false);
@@ -27,7 +28,7 @@ export default function AddDocumentForm({ onAdd }: { onAdd: () => void }) {
         formData.append('file', file);
 
         try {
-            const res = await fetch('http://localhost:8000/admin/parse-pdf', {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/parse-pdf`, {
                 method: 'POST',
                 body: formData
             });
@@ -57,7 +58,7 @@ export default function AddDocumentForm({ onAdd }: { onAdd: () => void }) {
 
         try {
             // Append process query param
-            const res = await fetch(`http://localhost:8000/admin/documents?process=${processWithLLM}`, {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/documents?process=${processWithLLM}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

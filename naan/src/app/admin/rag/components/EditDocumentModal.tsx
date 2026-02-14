@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { CHAT_ENDPOINT } from '@/lib/chat';
 
 interface AdminDocument {
     id: string;
@@ -40,7 +41,7 @@ export default function EditDocumentModal({ document, isOpen, onClose, onUpdate 
 
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/admin/documents/${document.id}`, {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/documents/${document.id}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

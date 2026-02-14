@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Trash2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { CHAT_ENDPOINT } from "@/lib/chat";
 
 interface QueueStatus {
     queue_size: number;
@@ -20,7 +21,7 @@ export default function RedisQueueViewer() {
     const { data, isLoading, isError } = useQuery<QueueStatus>({
         queryKey: ["redis-queue"],
         queryFn: async () => {
-            const res = await fetch("http://localhost:8000/admin/redis/queue");
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/redis/queue`);
             if (!res.ok) throw new Error("Failed to fetch queue status");
             return res.json();
         },
@@ -29,7 +30,7 @@ export default function RedisQueueViewer() {
 
     const flushMutation = useMutation({
         mutationFn: async () => {
-            const res = await fetch("http://localhost:8000/admin/redis/queue", {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/redis/queue`, {
                 method: "DELETE",
             });
             if (!res.ok) throw new Error("Failed to flush queue");
@@ -46,7 +47,7 @@ export default function RedisQueueViewer() {
 
     const addUrlMutation = useMutation({
         mutationFn: async (url: string) => {
-            const res = await fetch("http://localhost:8000/admin/redis/queue", {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/redis/queue`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ url }),

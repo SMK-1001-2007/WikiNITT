@@ -2,12 +2,6 @@
 *.exe
 tmp/
 server
-naan/.env.example
-naan/.env.example
-nitt_data_bfs
-nitt_data_scrapy
-nitt_vector_db
-nitt_pdfs
 __pycache__
 crawls/
 nitt_parent_store/

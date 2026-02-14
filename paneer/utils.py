@@ -128,3 +128,105 @@ class RagProcessor:
                 "topic": res.get("topic", "General")
             }
         }
+
+class RotatingGroqChat:
+    def __init__(self, api_keys, model_name="llama-3.1-8b-instant", temperature=0, tools=None):
+        self.api_keys = list(api_keys) if api_keys else []
+        self.model_name = model_name
+        self.temperature = temperature
+        self.tools = tools or []
+        self.current_key_idx = 0
+        
+        if not self.api_keys:
+             # Fallback for when initialized without keys (e.g. from env)
+            env_keys = os.getenv("GROQ_API_KEYS")
+            if env_keys:
+                 if isinstance(env_keys, str):
+                    if env_keys.startswith('['):
+                        self.api_keys = json.loads(env_keys)
+                    else:
+                        self.api_keys = env_keys.split(',')
+                 else:
+                    self.api_keys = []
+    
+    def bind_tools(self, tools):
+        """
+        Binds tools to the agent. Returns a new instance with the tools bound.
+        """
+        return RotatingGroqChat(
+            api_keys=self.api_keys,
+            model_name=self.model_name,
+            temperature=self.temperature,
+            tools=tools
+        )
+
+    def _get_llm(self):
+        if not self.api_keys:
+             raise ValueError("No Groq API keys provided.")
+             
+        current_key = self.api_keys[self.current_key_idx].strip()
+        llm = ChatGroq(
+            api_key=current_key,
+            model_name=self.model_name,
+            temperature=self.temperature,
+            max_retries=0 # We handle retries manually
+        )
+        
+        if self.tools:
+            return llm.bind_tools(self.tools)
+        return llm
+
+    def stream(self, input, config=None, **kwargs):
+        """
+        Streams response from the LLM, rotating keys on rate limit errors.
+        """
+        if not self.api_keys:
+             raise ValueError("No Groq API keys available to stream.")
+
+        max_attempts = len(self.api_keys) * 2
+        
+        for attempt in range(max_attempts):
+            try:
+                llm = self._get_llm()
+                # Yield from the generator
+                for chunk in llm.stream(input, config=config, **kwargs):
+                    yield chunk
+                return
+                
+            except Exception as e:
+                logging.warning(f"Error in stream attempt {attempt}: {e}")
+                error_msg = str(e).lower()
+                # Check for rate limit or similar errors (Groq often returns 429)
+                if "429" in error_msg or "rate_limit" in error_msg or "too many requests" in error_msg:
+                    logging.warning(f"⚠️ Rate Limit hit on Key #{self.current_key_idx}. Rotating...")
+                    self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
+                    continue
+                else:
+                    raise e
+                    
+        raise Exception("❌ ALL API keys are currently rate-limited or exhausted.")
+
+    def invoke(self, input, config=None, **kwargs):
+        """
+        Invokes the LLM, rotating keys on rate limit errors.
+        """
+        if not self.api_keys:
+             raise ValueError("No Groq API keys available to invoke.")
+
+        max_attempts = len(self.api_keys) * 2
+        
+        for attempt in range(max_attempts):
+            try:
+                llm = self._get_llm()
+                return llm.invoke(input, config=config, **kwargs)
+                
+            except Exception as e:
+                logging.warning(f"Error in invoke attempt {attempt}: {e}")
+                error_msg = str(e).lower()
+                if "429" in error_msg or "rate_limit" in error_msg or "too many requests" in error_msg:
+                    logging.warning(f"⚠️ Rate Limit hit on Key #{self.current_key_idx}. Rotating...")
+                    self.current_key_idx = (self.current_key_idx + 1) % len(self.api_keys)
+                    continue
+                else:
+                    raise e
+        raise Exception("❌ ALL API keys are currently rate-limited or exhausted.")

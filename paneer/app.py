@@ -3,7 +3,8 @@ import sys
 
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_mistralai import ChatMistralAI
+from utils import RotatingGroqChat
+from pydantic import BaseModel, Field
 from langchain_core.tools import Tool
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, ToolMessage
@@ -18,7 +19,7 @@ load_dotenv()
 DB_DIRECTORY = "bablu/nitt_vector_db"
 PARENT_STORE_DIRECTORY = "bablu/nitt_parent_store"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
-MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
+GROQ_API_KEYS = os.getenv("GROQ_API_KEYS")
 
 def format_docs(docs):
     """Helper to join retrieved document chunks into a single string."""
@@ -61,15 +62,25 @@ def get_retriever():
     return retriever
 
 def get_chat_agent():
-    if not MISTRAL_API_KEY:
-        print("Error: MISTRAL_API_KEY not found. Please set it.")
-        return
+    # Helper to parse keys if string
+    api_keys = []
+    if GROQ_API_KEYS:
+        if GROQ_API_KEYS.startswith('['):
+            api_keys = json.loads(GROQ_API_KEYS)
+        else:
+            api_keys = GROQ_API_KEYS.split(',')
+            
+    if not api_keys:
+        print("Error: GROQ_API_KEYS not found. Please set it.")
+        return None, []
 
     retriever = get_retriever()
     if not retriever:
         return None, []
 
-    
+    class SearchInput(BaseModel):
+        query: str = Field(description="The query to search for information about NIT Trichy.")
+
     def search_nitt_func(query: str):
         """Searches for information about NIT Trichy."""
         print(f"   (🔍 Searching: {query})")
@@ -81,14 +92,17 @@ def get_chat_agent():
     tool = Tool(
         name="search_nitt_data",
         func=search_nitt_func,
-        description="Searches for information about NIT Trichy, courses, events, campus details, and academic regulations. Use this whenever you need factual information about the institute."
+        description="Searches for information about NIT Trichy, courses, events, campus details, and academic regulations. Use this whenever you need factual information about the institute.",
+        args_schema=SearchInput
     )
     tools = [tool]
     
-    llm = ChatMistralAI(
-        model="mistral-small-latest",
-        temperature=0.3,
-        mistral_api_key=MISTRAL_API_KEY
+    # Use our new RotatingGroqChat wrapper
+    # Using the model from RagProcessor as requested/approved
+    llm = RotatingGroqChat(
+        api_keys=api_keys,
+        model_name="llama-3.1-8b-instant",
+        temperature=0.3
     )
     
     llm_with_tools = llm.bind_tools(tools)

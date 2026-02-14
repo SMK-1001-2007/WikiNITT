@@ -26,7 +26,7 @@ class RagProcessor:
         current_key = self.api_keys[self.current_key_idx]
         return ChatGroq(
             api_key=current_key, 
-            model_name="llama-3.1-8b-instant", 
+            model_name="meta-llama/llama-4-maverick-17b-128e-instruct", 
             temperature=0,
             max_retries=0
         )
@@ -58,12 +58,15 @@ class RagProcessor:
         
         INPUT:
         URL: {url}
-        CONTENT: {doc_text[:3500]}
+        CONTENT (Markdown/Text): 
+        {doc_text}
         
         TASK:
         1. **Filter**: Discard if it is navigational junk, old tenders (<2023), or empty.
-        2. **Rewrite**: If valid, rewrite the content into a clear, dense paragraph. 
-           - **CRITICAL**: Include the Source URL and context (e.g., "According to the PhD regulations at [URL]...").
+        2. **Rewrite/Structure**: 
+           - If the content is narrative, rewrite it into a clear, dense paragraph.
+           - **CRITICAL**: If the content contains **TABLES, SCHEDULES, or DATES**, PRESERVE the tabular structure using Markdown tables or bulleted lists. DO NOT flatten tables into paragraphs if it loses meaning.
+           - Include the Source URL context (e.g., "According to the schedule at [URL]...").
         3. **Questions**: Generate 3-5 potential questions that this document answers.
         
         OUTPUT format must be a strictly valid JSON (list of 1 object). 
@@ -75,7 +78,7 @@ class RagProcessor:
             "status": "keep", 
             "audience": "Student",
             "topic": "General",
-            "rewritten_text": "The content summary...",
+            "rewritten_text": "The content summary or markdown table...",
             "questions": ["Question 1?", "Question 2?"]
           }}
         ]

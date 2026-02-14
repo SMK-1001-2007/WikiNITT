@@ -46,8 +46,13 @@ export default function AddDocumentForm({ onAdd }: { onAdd: () => void }) {
         }
     };
 
+    const isSubmittingRef = React.useRef(false);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        if (isSubmittingRef.current) return;
+        isSubmittingRef.current = true;
         setLoading(true);
 
         try {
@@ -76,6 +81,7 @@ export default function AddDocumentForm({ onAdd }: { onAdd: () => void }) {
             alert('Error adding document: ' + err);
         } finally {
             setLoading(false);
+            isSubmittingRef.current = false;
         }
     };
 

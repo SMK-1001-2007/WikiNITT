@@ -3,7 +3,10 @@ import React, { useEffect, useState } from 'react';
 import AddDocumentForm from './components/AddDocumentForm';
 import EditDocumentModal from './components/EditDocumentModal';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
+// ... interfaces
 interface AdminDocument {
     id: string;
     source_url: string;
@@ -26,10 +29,24 @@ export default function RagAdminPage() {
     const [editingDoc, setEditingDoc] = useState<AdminDocument | null>(null);
     const [isEditOpen, setIsEditOpen] = useState(false);
 
+    // Search State
+    const [search, setSearch] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    // Debounce search
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(search);
+            setPage(1); // Reset to page 1 on search change
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [search]);
+
     const fetchDocuments = async (pageNum = 1) => {
         setLoading(true);
         try {
-            const res = await fetch(`http://localhost:8000/admin/documents?page=${pageNum}&limit=${LIMIT}`);
+            const query = debouncedSearch ? `&search=${encodeURIComponent(debouncedSearch)}` : '';
+            const res = await fetch(`http://localhost:8000/admin/documents?page=${pageNum}&limit=${LIMIT}${query}`);
             if (!res.ok) throw new Error('Failed to fetch documents');
             const data = await res.json();
             setDocuments(data.items);
@@ -45,7 +62,7 @@ export default function RagAdminPage() {
 
     useEffect(() => {
         fetchDocuments(page);
-    }, [page]);
+    }, [page, debouncedSearch]);
 
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this document?')) return;
@@ -98,7 +115,20 @@ export default function RagAdminPage() {
                 </div>
             </div>
 
-            <AddDocumentForm onAdd={() => fetchDocuments(page)} />
+            <div className="flex justify-between items-center mb-6">
+                <div className="relative w-72">
+                    <Search className="absolute left-2 top-2.5 h-4 w-4 text-gray-400" />
+                    <Input
+                        placeholder="Search documents..."
+                        className="pl-8"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                    />
+                </div>
+                <AddDocumentForm onAdd={() => fetchDocuments(page)} />
+            </div>
+
+
 
             <EditDocumentModal
                 document={editingDoc}

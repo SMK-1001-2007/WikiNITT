@@ -203,7 +203,7 @@ if os.getenv("GROQ_API_KEYS"):
 rag_processor = RagProcessor(GROQ_API_KEYS)
 
 @app.get("/admin/documents")
-async def list_documents(page: int = 1, limit: int = 20):
+async def list_documents(page: int = 1, limit: int = 20, search: str = None):
     retriever = get_retriever()
     if not retriever:
         raise HTTPException(status_code=500, detail="Retriever not initialized")
@@ -211,45 +211,94 @@ async def list_documents(page: int = 1, limit: int = 20):
     docs = []
     store = retriever.docstore
     
-    # Get all keys first (inefficient for large datasets but fine for <1000 docs)
+    # Get all keys first
     all_keys = list(store.yield_keys())
-    total_docs = len(all_keys)
+    
+    # If search is active, we must retrieve all to filter (inefficient but necessary for KV store)
+    # Optimization: For very large datasets, we'd need a secondary index (SQLite/ES).
+    current_docs = []
+    
+    # Batch get all documents
+    # Note: store.mget might consume memory if 1000s of large docs. 
+    # But for <1000 docs it's fine.
+    retrieved_docs = store.mget(all_keys)
+    
+    for i, doc in enumerate(retrieved_docs):
+        if doc:
+            # Filter if search term exists
+            if search:
+                search_lower = search.lower()
+                title_match = search_lower in doc.metadata.get("title", "").lower()
+                content_match = search_lower in doc.page_content.lower()
+                if not (title_match or content_match):
+                    continue
+
+            current_docs.append(AdminDocument(
+                id=all_keys[i],
+                source_url=doc.metadata.get("source_url", ""),
+                title=doc.metadata.get("title", "Untitled"),
+                content=doc.page_content,
+                type=doc.metadata.get("content_type", "unknown")
+            ))
+            
+    total_docs = len(current_docs)
     
     # Calculate slice
     start = (page - 1) * limit
     end = start + limit
-    sliced_keys = all_keys[start:end]
-    
-    if sliced_keys:
-        # Batch get documents
-        retrieved_docs = store.mget(sliced_keys)
-        for i, doc in enumerate(retrieved_docs):
-            if doc:
-                docs.append(AdminDocument(
-                    id=sliced_keys[i],
-                    source_url=doc.metadata.get("source_url", ""),
-                    title=doc.metadata.get("title", "Untitled"),
-                    content=doc.page_content,
-                    type=doc.metadata.get("content_type", "unknown")
-                ))
+    sliced_docs = current_docs[start:end]
 
     return {
-        "items": docs,
+        "items": sliced_docs,
         "total": total_docs,
         "page": page,
         "size": limit,
-        "pages": (total_docs + limit - 1) // limit
+        "pages": (total_docs + limit - 1) // limit if limit > 0 else 1
     }
 
 @app.post("/admin/parse-pdf")
 async def parse_pdf(file: UploadFile = File(...)):
+    temp_file = f"temp_{uuid.uuid4()}.pdf"
     try:
-        temp_file = f"temp_{uuid.uuid4()}.pdf"
         with open(temp_file, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        # Convert to markdown
+        # 1. Base Text Extraction (PyMuPDF)
+        print("Extracting base text with pymupdf4llm...")
         md_text = pymupdf4llm.to_markdown(temp_file)
+        
+        # 2. Advanced Table Extraction (GMFT)
+        try:
+            print("Extracting tables with GMFT...")
+            from gmft.pdf_bindings import PyPDFium2Document
+            from gmft.auto import AutoTableFormatter
+            
+            # Initialize (downloads model on first run)
+            doc_gmft = PyPDFium2Document(temp_file)
+            formatter = AutoTableFormatter()
+            tables = formatter.extract(doc_gmft)
+            
+            if tables:
+                table_mds = []
+                for table in tables:
+                    # Convert to markdown using pandas
+                    # content is usually a DataFrame
+                    df = table.df
+                    if not df.empty:
+                        table_mds.append(df.to_markdown(index=False))
+                
+                if table_mds:
+                    md_text += "\n\n## Detected Tables (High Quality Extraction)\n\n"
+                    md_text += "\n\n".join(table_mds)
+                    print(f"Appended {len(table_mds)} high-quality tables.")
+            else:
+                print("No tables detected by GMFT.")
+                
+            doc_gmft.close()
+
+        except Exception as e:
+            print(f"GMFT table extraction failed (using base text only): {e}")
+            # Continue with just base text
         
         os.remove(temp_file)
         return {"text": md_text}
@@ -263,6 +312,10 @@ async def add_document(doc: AdminDocument, process: bool = False):
     retriever = get_retriever()
     if not retriever:
         raise HTTPException(status_code=500, detail="Retriever not initialized")
+    
+    # DEBUG LOGGING
+    with open("debug_requests.log", "a") as f:
+        f.write(f"[{uuid.uuid4()}] add_document called. Process: {process}. ID provided: {doc.id}. Title: {doc.title}\n")
     
     # If ID is not provided, generate one
     doc_id = doc.id if doc.id else str(uuid.uuid4())
@@ -288,7 +341,35 @@ async def add_document(doc: AdminDocument, process: bool = False):
         metadata=final_metadata
     )
     
-    retriever.add_documents([new_doc], ids=[doc_id])
+    print(f"DEBUG: Adding document id={doc_id} type={type(doc_id)}")
+    print(f"DEBUG: new_doc content length={len(new_doc.page_content)}")
+    print(f"DEBUG: docs_list len={len([new_doc])} ids_list len={len([doc_id])}")
+
+    # Explicit validation
+    if len([new_doc]) != len([doc_id]):
+         print("CRITICAL ERROR: Document and ID list lengths do not match!")
+         raise HTTPException(status_code=500, detail="Internal Error: Document/ID mismatch preprocessing.")
+
+    # Updated: Let ParentDocumentRetriever generate/manage IDs internally to avoid mismatch issues
+    # when documents are split.
+    try:
+        # Try async method if available, defaulting to sync
+        if hasattr(retriever, 'aadd_documents'):
+            print("DEBUG: Using aadd_documents (async)")
+            await retriever.aadd_documents([new_doc])
+        else:
+            print("DEBUG: Using add_documents (sync)")
+            retriever.add_documents([new_doc])
+    except ValueError as ve:
+        print(f"CRITICAL ERROR in add_documents: {ve}")
+        # Validating likely cause
+        print(f"Docs list: {[new_doc]}")
+        print(f"IDs list: {[doc_id]}")
+        raise HTTPException(status_code=500, detail=f"Retriever Error: {str(ve)}")
+    except Exception as e:
+        print(f"UNEXPECTED ERROR in add_documents: {e}")
+        raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
+
     return {"status": "success", "message": "Document added"}
 
 @app.put("/admin/documents/{doc_id}")

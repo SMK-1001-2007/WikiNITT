@@ -29,10 +29,6 @@ def format_docs(docs):
         formatted_docs.append(f"Content: {content}\nSource: {source}")
     return "\n\n".join(formatted_docs)
 
-def get_chat_agent():
-    if not MISTRAL_API_KEY:
-        print("Error: MISTRAL_API_KEY not found. Please set it.")
-        return
 
 def get_retriever():
     if not os.path.exists(DB_DIRECTORY):
@@ -71,7 +67,8 @@ def get_chat_agent():
 
     retriever = get_retriever()
     if not retriever:
-        return
+        return None, []
+
     
     def search_nitt_func(query: str):
         """Searches for information about NIT Trichy."""

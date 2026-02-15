@@ -1,0 +1,1 @@
+export const CHAT_ENDPOINT = process.env.NEXT_PUBLIC_CHAT_API_URL || "http://localhost:8000"

@@ -7,6 +7,11 @@
 #     https://docs.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://docs.scrapy.org/en/latest/topics/spider-middleware.html
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 BOT_NAME = "bablu"
 
 SPIDER_MODULES = ["bablu.spiders"]
@@ -20,7 +25,6 @@ ADDONS = {}
 
 # Concurrency and throttling settings
 #CONCURRENT_REQUESTS = 16
-CONCURRENT_REQUESTS_PER_DOMAIN = 1
 
 # Disable cookies (enabled by default)
 #COOKIES_ENABLED = False
@@ -88,15 +92,37 @@ DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
 
 SCHEDULER_PERSIST = True
 
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6379
+REDIS_HOST = os.getenv('REDIS_HOST', 'localhost')
+REDIS_PORT = int(os.getenv('REDIS_PORT', 6379))
 
-ROBOTSTXT_OBEY = False 
-CONCURRENT_REQUESTS = 16
-DOWNLOAD_DELAY = 1  
+SCHEDULER_IDLE_BEFORE_CLOSE = 10
+REDIS_START_URLS_BATCH_SIZE = 16
+REDIS_ITEMS_SERIALIZER = 'json.dumps'
+
+ROBOTSTXT_OBEY = True 
+CONCURRENT_REQUESTS = 1
+CONCURRENT_REQUESTS_PER_DOMAIN = 1
+DOWNLOAD_DELAY = 1
+COOKIES_ENABLED = False
 RETRY_ENABLED = True
 RETRY_TIMES = 3  
+LOG_LEVEL = 'INFO'
 
 ITEM_PIPELINES = {
-    'bablu.pipelines.BabluPipeline': 300,
+    'bablu.pipelines.SmartRagPipeline': 300,
 }
+
+GROQ_API_KEYS = os.getenv("GROQ_API_KEYS", "").split(",")
+if GROQ_API_KEYS == [""]:
+    GROQ_API_KEYS = []
+
+# Postgres & Chroma Settings
+POSTGRES_CONNECTION_STRING = os.getenv('POSTGRES_CONNECTION_STRING', "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store")
+CHROMA_HOST = os.getenv('CHROMA_HOST', "localhost")
+CHROMA_PORT = int(os.getenv('CHROMA_PORT', 8001))
+
+# BFS Settings - Using PriorityQueue (with DEPTH_PRIORITY) allows us to prioritize PDFs WITHIN each depth level
+DEPTH_PRIORITY = 50
+SCHEDULER_QUEUE_CLASS = 'scrapy_redis.queue.PriorityQueue'
+# SCHEDULER_DISK_QUEUE = 'scrapy.squeues.PickleFifoDiskQueue'
+# SCHEDULER_MEMORY_QUEUE = 'scrapy.squeues.FifoMemoryQueue'

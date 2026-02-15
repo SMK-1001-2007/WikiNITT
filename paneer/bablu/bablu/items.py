@@ -7,6 +7,15 @@ import scrapy
 
 
 class BabluItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+    url = scrapy.Field()
+    source_url = scrapy.Field()
+    content_type = scrapy.Field()
+    body = scrapy.Field()
+
+class NittRagItem(scrapy.Item):
+    url = scrapy.Field()          # The source URL (nitt.edu/...)
+    title = scrapy.Field()        # Page title or PDF filename
+    file_type = scrapy.Field()    # 'html' or 'pdf'
+    raw_text = scrapy.Field()     # The messy raw text content
+    cleaned_text = scrapy.Field() # The cleaned text content
+    file_path = scrapy.Field()    # Local path if you downloaded it (optional)

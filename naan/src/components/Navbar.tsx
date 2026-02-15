@@ -153,35 +153,38 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }
 
-  if (isArticleDetail) {
+if (isArticleDetail) {
     return (
       <>
-        <nav className="fixed top-0 z-50 w-full bg-[#2f3035] border-b border-white/10">
-          <div className="mx-auto h-16 max-w-[1280px] px-4 sm:px-6">
-            <div className="flex h-full items-center justify-between">
-              <Link href="/" className="flex items-center">
-                <LogoIcon className="mr-2 h-8 w-8 rounded-md bg-white/10 p-1.5 fill-white" />
-                <span className="text-2xl font-light text-white">WikiNITT</span>
+        {/* Removed the bottom border here */}
+        <nav className="fixed top-0 z-50 w-full bg-[#2d2d2d] transition-all duration-300">
+          <div className="w-full px-[5%] md:px-[8%] py-[15px]">
+            <div className="flex items-center justify-between">
+              
+              <Link href="/" className="flex items-center group relative pb-1">
+                <span className="text-[1.2rem] font-bold tracking-[1px] text-white after:content-[''] after:absolute after:w-0 after:h-[2px] after:-bottom-1 after:left-0 after:bg-white after:transition-all after:duration-300 group-hover:after:w-full">
+                  WikiNITT
+                </span>
               </Link>
 
-              <div className="hidden items-center gap-10 md:flex">
-                <Link href="/" className="text-sm text-white/80 hover:text-white transition-colors">
+              <div className="hidden items-center gap-[30px] md:flex">
+                <Link href="/" className="text-[0.8rem] uppercase text-[#aaa] hover:text-white transition-colors">
                   Homepage
                 </Link>
-                <Link href="/articles" className="text-sm text-white/80 hover:text-white transition-colors">
+                <Link href="/articles" className="text-[0.8rem] uppercase text-[#aaa] hover:text-white transition-colors">
                   About us
                 </Link>
-                <Link href="/c" className="text-sm text-white/80 hover:text-white transition-colors">
+                <Link href="/c" className="text-[0.8rem] uppercase text-[#aaa] hover:text-white transition-colors">
                   Contacts
                 </Link>
               </div>
 
-              <div className="flex items-center gap-3 sm:gap-4">
-                <MapPin className="h-4 w-4 text-white/70" />
+              <div className="flex items-center gap-[15px] text-[0.8rem]">
+                <MapPin className="h-4 w-4 text-white" />
                 {status === "unauthenticated" && (
                   <button
                     onClick={() => signIn("dauth")}
-                    className="rounded-sm bg-[#ece4d9] px-4 py-2 text-sm font-semibold text-[#2f3035] hover:bg-white transition-colors shadow-sm"
+                    className="rounded-[2px] bg-white px-[16px] py-[6px] text-[0.75rem] font-semibold text-[#2d2d2d] hover:bg-[#ddd] hover:-translate-y-[2px] hover:shadow-[0_4px_8px_rgba(255,255,255,0.2)] transition-all"
                   >
                     Login
                   </button>
@@ -191,7 +194,7 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
                 <button
                   type="button"
                   onClick={() => setIsArticleMenuOpen((prev) => !prev)}
-                  className="rounded-md p-2 text-white/80 hover:bg-white/10 hover:text-white transition-colors md:hidden"
+                  className="text-white md:hidden"
                   aria-label="Open navigation menu"
                 >
                   {isArticleMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -201,15 +204,15 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
           </div>
 
           {isArticleMenuOpen && (
-            <div className="border-t border-white/10 bg-[#2f3035] px-4 py-3 md:hidden">
-              <div className="flex flex-col gap-3">
-                <Link href="/" className="text-sm text-white/80" onClick={() => setIsArticleMenuOpen(false)}>
+            <div className="border-t border-white/10 bg-[#2d2d2d] px-[5%] py-4 md:hidden">
+              <div className="flex flex-col gap-4">
+                <Link href="/" className="text-[0.8rem] uppercase text-[#aaa] hover:text-white" onClick={() => setIsArticleMenuOpen(false)}>
                   Homepage
                 </Link>
-                <Link href="/articles" className="text-sm text-white/80" onClick={() => setIsArticleMenuOpen(false)}>
+                <Link href="/articles" className="text-[0.8rem] uppercase text-[#aaa] hover:text-white" onClick={() => setIsArticleMenuOpen(false)}>
                   About us
                 </Link>
-                <Link href="/c" className="text-sm text-white/80" onClick={() => setIsArticleMenuOpen(false)}>
+                <Link href="/c" className="text-[0.8rem] uppercase text-[#aaa] hover:text-white" onClick={() => setIsArticleMenuOpen(false)}>
                   Contacts
                 </Link>
               </div>
@@ -217,14 +220,13 @@ export default function Navbar({ children }: { children: React.ReactNode }) {
           )}
         </nav>
 
-        <main className="min-h-screen pt-16">
+        <main className="min-h-screen pt-[60px] bg-[#f3f3ff]">
           {children}
         </main>
         <SearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       </>
     );
   }
-
   // ... (Rest of the component logic remains the same for other pages)
   const navItems = [
     { name: "Home", href: "/", icon: Home, section: "main" },

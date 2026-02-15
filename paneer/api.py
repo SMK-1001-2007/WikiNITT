@@ -22,6 +22,7 @@ from utils import RagProcessor
 from dotenv import load_dotenv
 from app import POSTGRES_CONNECTION_STRING
 import psycopg2
+import chromadb
 
 
 import redis
@@ -480,29 +481,38 @@ async def delete_all_documents():
         raise HTTPException(status_code=500, detail="Retriever not initialized")
     
     try:
-        deleted_count = 0
-        with psycopg2.connect(POSTGRES_CONNECTION_STRING) as conn:
-            with conn.cursor() as cur:
-                cur.execute("DELETE FROM public.doc_store")
-                deleted_count = cur.rowcount
-            conn.commit()
-            
-        print(f"DEBUG: Manually deleted {deleted_count} rows from public.doc_store")
+        try:
+            with psycopg2.connect(POSTGRES_CONNECTION_STRING) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("TRUNCATE TABLE public.doc_store")
+                    print("DEBUG: Truncated public.doc_store")
+                conn.commit()
+        except Exception as pg_e:
+            print(f"Postgres Delete Error: {pg_e}")
+            raise HTTPException(status_code=500, detail=f"Postgres cleanup failed: {pg_e}")
 
         try:
-             if hasattr(retriever.vectorstore, "_collection"):
-                 print("DEBUG: Deleting all from Chroma collection directly")
-                 retriever.vectorstore._collection.delete(where={}) 
-             else:
-                 print("DEBUG: Could not access _collection to wipe vectorstore")
+            print("DEBUG: Attempting to wipe Chroma...")
+            existing_ids = retriever.vectorstore.get()["ids"]
+            
+            if existing_ids:
+                batch_size = 40000 
+                for i in range(0, len(existing_ids), batch_size):
+                    batch = existing_ids[i:i + batch_size]
+                    retriever.vectorstore.delete(batch)
+                print(f"DEBUG: Deleted {len(existing_ids)} embeddings from Chroma.")
+            else:
+                print("DEBUG: Chroma was already empty.")
 
-        except Exception as e:
-            print(f"Warning: Failed to cleanup vectorstore: {e}")
+        except Exception as chroma_e:
+            print(f"Warning: Failed to cleanup vectorstore: {chroma_e}")
         
-        return {"status": "success", "message": f"Deleted all documents ({deleted_count} from store). Please refresh."}
+        return {"status": "success", "message": "All documents deleted from Postgres and Chroma."}
 
+    except HTTPException as he:
+        raise he
     except Exception as e:
-        print(f"Error in delete_all_documents: {e}")
+        print(f"CRITICAL Error in delete_all_documents: {e}")
         raise HTTPException(status_code=500, detail=f"Delete all failed: {str(e)}")
 
 @app.delete("/admin/documents/{doc_id}", dependencies=[Depends(get_admin_user)])

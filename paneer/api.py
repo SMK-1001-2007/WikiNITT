@@ -20,6 +20,9 @@ import os
 import pymupdf4llm
 from utils import RagProcessor
 from dotenv import load_dotenv
+from app import POSTGRES_CONNECTION_STRING
+import psycopg2
+
 
 import redis
 import pickle
@@ -470,6 +473,37 @@ async def update_document(doc_id: str, doc: AdminDocument, process: bool = False
     retriever.add_documents([new_doc], ids=[doc_id])
     
     return {"status": "success", "message": "Document updated"}
+
+@app.delete("/admin/documents/all", dependencies=[Depends(get_admin_user)])
+async def delete_all_documents():
+    if not retriever:
+        raise HTTPException(status_code=500, detail="Retriever not initialized")
+    
+    try:
+        deleted_count = 0
+        with psycopg2.connect(POSTGRES_CONNECTION_STRING) as conn:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM public.doc_store")
+                deleted_count = cur.rowcount
+            conn.commit()
+            
+        print(f"DEBUG: Manually deleted {deleted_count} rows from public.doc_store")
+
+        try:
+             if hasattr(retriever.vectorstore, "_collection"):
+                 print("DEBUG: Deleting all from Chroma collection directly")
+                 retriever.vectorstore._collection.delete(where={}) 
+             else:
+                 print("DEBUG: Could not access _collection to wipe vectorstore")
+
+        except Exception as e:
+            print(f"Warning: Failed to cleanup vectorstore: {e}")
+        
+        return {"status": "success", "message": f"Deleted all documents ({deleted_count} from store). Please refresh."}
+
+    except Exception as e:
+        print(f"Error in delete_all_documents: {e}")
+        raise HTTPException(status_code=500, detail=f"Delete all failed: {str(e)}")
 
 @app.delete("/admin/documents/{doc_id}", dependencies=[Depends(get_admin_user)])
 async def delete_document(doc_id: str):

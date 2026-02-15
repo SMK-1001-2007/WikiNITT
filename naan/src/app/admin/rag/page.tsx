@@ -134,6 +134,34 @@ export default function RagAdminPage() {
         }
     };
 
+    const handleDeleteAll = async () => {
+        if (!confirm('CRITICAL WARNING: This will delete ALL documents from the database. This action cannot be undone.\n\nAre you absolutely sure?')) return;
+        if (!confirm('Please confirm one more time: Do you want to wipe the ENTIRE knowledge base?')) return;
+
+        if (!session?.backendToken) return;
+
+        try {
+            const res = await fetch(`${CHAT_ENDPOINT}/admin/documents/all`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${session.backendToken}`
+                }
+            });
+
+            if (!res.ok) throw new Error('Failed to delete all documents');
+
+            const data = await res.json();
+
+            // Clear selection
+            setSelectedIds(new Set());
+            fetchDocuments(1);
+            alert(data.message);
+        } catch (err) {
+            console.error(err);
+            alert('Error deleting all documents: ' + err);
+        }
+    };
+
     const toggleSelectAll = () => {
         if (selectedIds.size === documents.length && documents.length > 0) {
             setSelectedIds(new Set());
@@ -222,6 +250,13 @@ export default function RagAdminPage() {
                                     Delete Selected ({selectedIds.size})
                                 </Button>
                             )}
+                            <Button
+                                onClick={handleDeleteAll}
+                                variant="destructive"
+                                className="bg-red-800 hover:bg-red-900 text-white ml-2"
+                            >
+                                Delete All
+                            </Button>
                         </div>
                         <AddDocumentForm onAdd={() => fetchDocuments(page)} />
                     </div>

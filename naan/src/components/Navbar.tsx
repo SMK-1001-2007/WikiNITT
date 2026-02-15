@@ -33,7 +33,6 @@ export function UserMenu() {
   const menuRef = useRef<HTMLDivElement>(null);
   const { data: session } = useSession();
 
-  console.log(session?.backendToken)
   const { data: me } = useQuery({
     queryKey: ["me"],
     queryFn: async () => {

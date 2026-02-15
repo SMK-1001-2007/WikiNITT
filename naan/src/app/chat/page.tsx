@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation'; // Import useRouter
+import { useSession, signIn } from "next-auth/react";
 import { motion, AnimatePresence } from 'framer-motion';
 import styles from './chat.module.css';
 import { CHAT_ENDPOINT } from '@/lib/chat';
@@ -44,6 +45,7 @@ interface Message {
 
 export default function ChatPage() {
   const router = useRouter(); // Initialize Router
+  const { data: session, status } = useSession();
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
 
@@ -67,6 +69,12 @@ export default function ChatPage() {
     const textToSend = textOverride || input;
     if (!textToSend.trim()) return;
 
+    if (status !== 'authenticated' || !session?.backendToken) {
+      // Should not happen if UI is blocked, but good for safety
+      console.error("User not authenticated");
+      return;
+    }
+
     const userMsg: Message = { id: Date.now().toString(), role: 'user', content: textToSend };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
@@ -84,7 +92,10 @@ export default function ChatPage() {
     try {
       const response = await fetch(`${CHAT_ENDPOINT}/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.backendToken}`
+        },
         body: JSON.stringify({
           message: textToSend,
           session_id: sessionId
@@ -181,6 +192,31 @@ export default function ChatPage() {
       handleSend();
     }
   };
+
+  if (status === "loading") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-xl font-medium text-gray-600 animate-pulse">Loading WikiNITT Chat...</div>
+      </div>
+    );
+  }
+
+  if (status === "unauthenticated") {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="bg-white p-8 rounded-lg shadow-lg max-w-md w-full text-center">
+          <h1 className="text-2xl font-bold mb-4 text-gray-900">Welcome to WikiNITT Chat</h1>
+          <p className="text-gray-600 mb-6">Please sign in to start chatting regarding NITT.</p>
+          <button
+            onClick={() => signIn("google")}
+            className="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 transition-colors"
+          >
+            Sign In
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

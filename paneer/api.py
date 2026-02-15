@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
@@ -34,9 +35,6 @@ class QueueStatus(BaseModel):
     scheduled_count: int
     queued_urls: list[str]
 
-
-
-# Data Models
 class AdminDocument(BaseModel):
     id: str
     source_url: str
@@ -58,7 +56,7 @@ MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 # Database Connection
 try:
     mongo_client = pymongo.MongoClient(MONGODB_URI)
-    db = mongo_client.get_database() # Uses database from URI
+    db = mongo_client.get_database(name="wikinitt")
     users_collection = db["users"]
     print("Connected to MongoDB")
 except Exception as e:
@@ -119,9 +117,9 @@ async def get_current_user(request: Request):
     return user_id
 
 async def get_admin_user(user_id: str = Depends(get_current_user)):
-    if not users_collection:
+    if users_collection is None:
         raise HTTPException(status_code=500, detail="Database connection unavailable")
-        
+    print("user id is: ", user_id)
     try:
         user = users_collection.find_one({"_id": ObjectId(user_id)})
         if not user:
@@ -179,7 +177,6 @@ async def chat_generator(user_input: str, session_id: str):
         while True:
             full_response = None
             
-            # Stream Parsing State
             buffer = ""
             is_thinking = False
             
@@ -289,7 +286,6 @@ async def chat_generator(user_input: str, session_id: str):
         print(f"Error processing chat: {e}")
         yield json.dumps({"type": "error", "content": str(e)}) + "\n"
 
-# Initialize RAG Processor
 GROQ_API_KEYS = []
 if os.getenv("GROQ_API_KEYS"):
     GROQ_API_KEYS = os.getenv("GROQ_API_KEYS", "").split(",")
@@ -302,24 +298,15 @@ async def list_documents(page: int = 1, limit: int = 20, search: str = None):
     if not retriever:
         raise HTTPException(status_code=500, detail="Retriever not initialized")
     
-    docs = []
     store = retriever.docstore
     
-    # Get all keys first
     all_keys = list(store.yield_keys())
-    
-    # If search is active, we must retrieve all to filter (inefficient but necessary for KV store)
-    # Optimization: For very large datasets, we'd need a secondary index (SQLite/ES).
     current_docs = []
     
-    # Batch get all documents
-    # Note: store.mget might consume memory if 1000s of large docs. 
-    # But for <1000 docs it's fine.
     retrieved_docs = store.mget(all_keys)
     
     for i, doc in enumerate(retrieved_docs):
         if doc:
-            # Filter if search term exists
             if search:
                 search_lower = search.lower()
                 title_match = search_lower in doc.metadata.get("title", "").lower()
@@ -357,17 +344,14 @@ async def parse_pdf(file: UploadFile = File(...)):
         with open(temp_file, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
             
-        # 1. Base Text Extraction (PyMuPDF)
         print("Extracting base text with pymupdf4llm...")
         md_text = pymupdf4llm.to_markdown(temp_file)
         
-        # 2. Advanced Table Extraction (GMFT)
         try:
             print("Extracting tables with GMFT...")
             from gmft.pdf_bindings import PyPDFium2Document
             from gmft.auto import AutoTableFormatter
             
-            # Initialize (downloads model on first run)
             doc_gmft = PyPDFium2Document(temp_file)
             formatter = AutoTableFormatter()
             tables = formatter.extract(doc_gmft)
@@ -375,8 +359,6 @@ async def parse_pdf(file: UploadFile = File(...)):
             if tables:
                 table_mds = []
                 for table in tables:
-                    # Convert to markdown using pandas
-                    # content is usually a DataFrame
                     df = table.df
                     if not df.empty:
                         table_mds.append(df.to_markdown(index=False))
@@ -392,7 +374,6 @@ async def parse_pdf(file: UploadFile = File(...)):
 
         except Exception as e:
             print(f"GMFT table extraction failed (using base text only): {e}")
-            # Continue with just base text
         
         os.remove(temp_file)
         return {"text": md_text}
@@ -407,11 +388,9 @@ async def add_document(doc: AdminDocument, process: bool = False):
     if not retriever:
         raise HTTPException(status_code=500, detail="Retriever not initialized")
     
-    # DEBUG LOGGING
     with open("debug_requests.log", "a") as f:
         f.write(f"[{uuid.uuid4()}] add_document called. Process: {process}. ID provided: {doc.id}. Title: {doc.title}\n")
     
-    # If ID is not provided, generate one
     doc_id = doc.id if doc.id else str(uuid.uuid4())
     
     final_content = doc.content
@@ -434,34 +413,17 @@ async def add_document(doc: AdminDocument, process: bool = False):
         page_content=final_content,
         metadata=final_metadata
     )
-    
-    print(f"DEBUG: Adding document id={doc_id} type={type(doc_id)}")
-    print(f"DEBUG: new_doc content length={len(new_doc.page_content)}")
-    print(f"DEBUG: docs_list len={len([new_doc])} ids_list len={len([doc_id])}")
 
-    # Explicit validation
     if len([new_doc]) != len([doc_id]):
-         print("CRITICAL ERROR: Document and ID list lengths do not match!")
          raise HTTPException(status_code=500, detail="Internal Error: Document/ID mismatch preprocessing.")
-
-    # Updated: Let ParentDocumentRetriever generate/manage IDs internally to avoid mismatch issues
-    # when documents are split.
     try:
-        # Try async method if available, defaulting to sync
         if hasattr(retriever, 'aadd_documents'):
-            print("DEBUG: Using aadd_documents (async)")
             await retriever.aadd_documents([new_doc])
         else:
-            print("DEBUG: Using add_documents (sync)")
             retriever.add_documents([new_doc])
     except ValueError as ve:
-        print(f"CRITICAL ERROR in add_documents: {ve}")
-        # Validating likely cause
-        # print(f"Docs list: {[new_doc]}")
-        # print(f"IDs list: {[doc_id]}")
         raise HTTPException(status_code=500, detail=f"Retriever Error: {str(ve)}")
     except Exception as e:
-        print(f"UNEXPECTED ERROR in add_documents: {e}")
         raise HTTPException(status_code=500, detail=f"Unexpected Error: {str(e)}")
 
     return {"status": "success", "message": "Document added"}
@@ -473,7 +435,6 @@ async def update_document(doc_id: str, doc: AdminDocument, process: bool = False
         raise HTTPException(status_code=500, detail="Retriever not initialized")
         
     store = retriever.docstore
-    # Verify existence
     existing = store.mget([doc_id])[0]
     if not existing:
          raise HTTPException(status_code=404, detail="Document not found")
@@ -499,18 +460,14 @@ async def update_document(doc_id: str, doc: AdminDocument, process: bool = False
         metadata=final_metadata
     )
     
-    # Clean up old chunks from vectorstore
     try:
-        # ParentDocumentRetriever stores the parent ID in child chunks metadata using id_key
         id_key = getattr(retriever, "id_key", "doc_id")
         retriever.vectorstore.delete(where={id_key: doc_id})
     except Exception as e:
         print(f"Warning: Failed to cleanup vectorstore chunks for {doc_id}: {e}")
 
-    # Delete old parent doc
     store.mdelete([doc_id]) 
     
-    # Add new (stores parent and adds new child chunks)
     retriever.add_documents([new_doc], ids=[doc_id])
     
     return {"status": "success", "message": "Document updated"}
@@ -523,14 +480,12 @@ async def delete_document(doc_id: str):
     
     store = retriever.docstore
     
-    # Clean up chunks from vectorstore
     try:
         id_key = getattr(retriever, "id_key", "doc_id")
         retriever.vectorstore.delete(where={id_key: doc_id})
     except Exception as e:
         print(f"Warning: Failed to cleanup vectorstore chunks for {doc_id}: {e}")
 
-    # Delete from docstore
     store.mdelete([doc_id])
     
     return {"status": "success", "message": "Document deleted"}
@@ -550,24 +505,14 @@ async def delete_documents(request: DeleteDocumentsRequest):
     if not ids_to_delete:
          return {"status": "success", "message": "No documents to delete"}
 
-    # 1. Clean up chunks from vectorstore for ALL docs
     try:
         id_key = getattr(retriever, "id_key", "doc_id")
-        # Most vectorstores support delete by filter/list. 
-        # For simplicity in this specific setup, we iterate. 
-        # Optimization: verify if vectorstore.delete supports 'id_in' or similar if needed.
-        # But 'where' usually implies single match or specific filter logic depending on backend.
-        # Chroma/PGVector often support list of IDs for delete directly if passed as ids argument, 
-        # but here we are deleting by *metadata* ID (the parent ID).
-        
-        # Iterating might be slow for huge batches, but safe for now.
         for doc_id in ids_to_delete:
              retriever.vectorstore.delete(where={id_key: doc_id})
              
     except Exception as e:
         print(f"Warning: Failed to cleanup vectorstore chunks during bulk delete: {e}")
 
-    # 2. Delete from docstore (key-value store usually supports batch)
     try:
         store.mdelete(ids_to_delete)
     except Exception as e:
@@ -580,7 +525,6 @@ async def delete_documents(request: DeleteDocumentsRequest):
 async def trigger_crawl(request: CrawlRequest):
     import subprocess
     try:
-        # Run scrapy as a subprocess
         subprocess.Popen(
             ["scrapy", "crawl", "nitt", "-s", f"CLOSESPIDER_PAGECOUNT={request.pages}"],
             cwd="bablu" 
@@ -600,13 +544,10 @@ async def chat_endpoint(request: ChatRequest):
 async def get_redis_queue_status():
     try:
         spider_name = "nitt"
-        # Redis keys are bytes or strings. If client is binary, we can pass strings, they get encoded.
         queue_key = f"{spider_name}:requests"
         dupefilter_key = f"{spider_name}:dupefilter"
         start_urls_key = f"{spider_name}:start_urls"
         
-        # Check type of queue to get size correctly
-        # redis_client.type returns bytes e.g. b'zset'
         queue_type = redis_client.type(queue_key)
         queue_size = 0
         queued_urls = []
@@ -615,7 +556,6 @@ async def get_redis_queue_status():
         
         if queue_type == b"zset":
             queue_size = redis_client.zcard(queue_key)
-            # Fetch top 50. Scrapy-Redis PriorityQueue (zset) usually orders by priority (score).
             raw_items = redis_client.zrange(queue_key, 0, 49)
             
         elif queue_type == b"list":
@@ -624,15 +564,11 @@ async def get_redis_queue_status():
         
         processed_count = redis_client.scard(dupefilter_key)
         
-        # Scheduled count (Start URLs waiting to be ingested)
         scheduled_count = redis_client.llen(start_urls_key)
         
-        # Deserialize
         for item in raw_items:
             try:
                 obj = pickle.loads(item)
-                # Scrapy request objects or dicts. 
-                # Our debug script showed they are dicts: {'url': '...', ...}
                 if isinstance(obj, dict) and 'url' in obj:
                     queued_urls.append(obj['url'])
                 elif hasattr(obj, 'url'):
@@ -640,7 +576,6 @@ async def get_redis_queue_status():
                 else:
                     queued_urls.append(str(obj)) 
             except Exception:
-                # Fallback if not pickle or decode error
                 try:
                     queued_urls.append(item.decode('utf-8', errors='ignore'))
                 except:
@@ -685,8 +620,6 @@ async def add_url_to_queue(request: AddUrlRequest):
         spider_name = "nitt"
         start_urls_key = f"{spider_name}:start_urls"
         
-        # We push to start_urls. Scrapy-Redis spiders automatically pop from here.
-        # Format: Just the URL string.
         redis_client.lpush(start_urls_key, request.url)
         
         return {"status": "success", "message": f"Added {request.url} to queue"}

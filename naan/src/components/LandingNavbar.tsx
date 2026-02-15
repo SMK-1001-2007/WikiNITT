@@ -38,7 +38,7 @@ export default function LandingNavbar() {
                         <Link href="/" className="flex items-center group gap-2.5">
                             <div className="relative">
                                 <div className="absolute inset-0 bg-indigo-500 blur-lg opacity-20 rounded-full group-hover:opacity-40 transition-opacity"></div>
-                                <LogoIcon className="relative h-9 w-9 fill-white bg-gradient-to-br from-indigo-700 to-blue-700 rounded-xl p-1.5 shadow-lg group-hover:scale-105 transition-transform" />
+                                <LogoIcon className="relative h-9 w-9 fill-white bg-linear-to-br from-indigo-700 to-blue-700 rounded-xl p-1.5 shadow-lg group-hover:scale-105 transition-transform" />
                             </div>
                             <div className="flex flex-col leading-none">
                                 <span className="text-lg font-bold text-slate-900 tracking-tight">

@@ -19,15 +19,12 @@ load_dotenv()
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 GROQ_API_KEYS = os.getenv("GROQ_API_KEYS")
 
-# Postgres & Chroma Settings
-# Postgres & Chroma Settings
 POSTGRES_CONNECTION_STRING = os.getenv('POSTGRES_CONNECTION_STRING', "postgresql://nitt_user:nitt_password@localhost:5432/nitt_rag_store")
 CHROMA_HOST = os.getenv('CHROMA_HOST', "localhost")
 CHROMA_PORT = int(os.getenv('CHROMA_PORT', 8001))
 
 
 def format_docs(docs):
-    """Helper to join retrieved document chunks into a single string."""
     formatted_docs = []
     for doc in docs:
         source = doc.metadata.get("source_url", "Unknown Source")
@@ -91,8 +88,6 @@ def get_chat_agent():
         query: str = Field(description="The query to search for information about NIT Trichy.")
 
     def search_nitt_func(query: str):
-        """Searches for information about NIT Trichy."""
-        print(f"   (🔍 Searching: {query})")
         docs = retriever.invoke(query)
         if not docs:
             return "No results found. The database does not contain information matching this query."

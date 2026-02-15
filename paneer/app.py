@@ -90,7 +90,7 @@ def get_chat_agent():
     def search_nitt_func(query: str):
         docs = retriever.invoke(query)
         if not docs:
-            return "No results found. The database does not contain information matching this query."
+            return f"No results found for query: '{query}'. The database does not contain information matching this query."
         return format_docs(docs)
 
     tool = Tool(

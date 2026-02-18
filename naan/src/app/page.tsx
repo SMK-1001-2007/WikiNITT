@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { LandingSearch } from "@/components/LandingSearch";
 import { Calendar, MessageCircle, User } from "lucide-react";
 import LandingNavbar from "@/components/LandingNavbar";
@@ -11,19 +11,49 @@ import { Query, Article } from "@/gql/graphql";
 import Link from "next/link";
 
 export default function Home() {
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
+
+  const { data: categorySeed } = useQuery({
+    queryKey: ["landing-categories"],
+    queryFn: async () => {
+      const endpoint =
+        process.env.NEXT_PUBLIC_GRAPHQL_API_URL || "http://localhost:8080/query";
+      const data = await request<Query>(endpoint, GET_ARTICLES, {
+        limit: 100,
+        offset: 0,
+      });
+      return data.articles as Article[];
+    },
+    staleTime: 10 * 60 * 1000,
+  });
+
   const { data: articlesData, isLoading } = useQuery({
-    queryKey: ["landing-articles"],
+    queryKey: ["landing-articles", selectedCategory],
     queryFn: async () => {
       const endpoint =
         process.env.NEXT_PUBLIC_GRAPHQL_API_URL || "http://localhost:8080/query";
       const data = await request<Query>(endpoint, GET_ARTICLES, {
         limit: 12,
         offset: 0,
+        category: selectedCategory,
       });
       return data.articles as Article[];
     },
     staleTime: 5 * 60 * 1000,
   });
+
+  const categoryOptions = useMemo(() => {
+    const source = categorySeed || articlesData;
+    if (!source || source.length === 0) return ["All"];
+    const categories = Array.from(
+      new Set(
+        source
+          .map((article) => article.category)
+          .filter((c): c is string => Boolean(c)),
+      ),
+    ).sort((a, b) => a.localeCompare(b));
+    return ["All", ...categories];
+  }, [categorySeed, articlesData]);
 
   const { featuredArticle, listArticles } = useMemo(() => {
     if (!articlesData || articlesData.length === 0) {
@@ -60,12 +90,17 @@ export default function Home() {
 
         {/* --- Categories --- */}
         <section className="flex justify-center gap-3 flex-wrap">
-          <button className="cat-btn active">All Categories</button>
-          <button className="cat-btn">Campus</button>
-          <button className="cat-btn">Academics</button>
-          <button className="cat-btn">Students Life</button>
-          <button className="cat-btn">Hostels</button>
-          <button className="cat-btn">Alumni</button>
+          {categoryOptions.map((label) => (
+            <button
+              key={label}
+              className={`cat-btn ${(!selectedCategory && label === "All") || selectedCategory === label ? "active" : ""}`}
+              onClick={() =>
+                setSelectedCategory(label === "All" ? undefined : label)
+              }
+            >
+              {label}
+            </button>
+          ))}
         </section>
 
         {/* --- Featured Article --- */}
